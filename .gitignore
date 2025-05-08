@@ -1,1 +1,3 @@
 secrets/gspread_service_account.json
+.env
+secrets/
