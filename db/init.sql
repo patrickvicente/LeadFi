@@ -21,6 +21,7 @@ CREATE TABLE "lead" (
   "bd_in_charge" varchar(20) NOT NULL,
   "background" text
   -- Might need to add company_type market maker, broker prop firm etc
+  -- Add udpated at timestamp
 );
 
 -- Customer Table
