@@ -25,3 +25,8 @@ def extract_sheet(sheet_name): # 'Leads' | 'Customer' | 'Daily Trading Volume' |
 
     return df
 
+# Extract data from apollo csv
+def extract_apollo_csv(file_path: str) -> pd.DataFrame:
+    return pd.read_csv(file_path)
+
+

@@ -1,3 +1,4 @@
 secrets/gspread_service_account.json
 .env
 secrets/
+data/apollo_exports

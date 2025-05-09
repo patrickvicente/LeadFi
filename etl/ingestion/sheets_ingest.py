@@ -2,6 +2,7 @@ from etl.extract import extract_sheet
 from etl.transform import clean_leads
 from etl.load import load_to_postgres
 
+# ingest from Google Sheets
 def main():
     print("Starting ETL for Google Sheets >>> PostgreSQL")
 

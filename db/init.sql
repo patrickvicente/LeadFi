@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS lead;
 CREATE TABLE "lead" (
   "lead_id" serial PRIMARY KEY NOT NULL,
   "full_name" varchar(50) NOT NULL,
+  "title" varchar(50),
   "email" varchar(120),
   "telegram" varchar(50),
   "phone_number" varchar(20),
@@ -19,6 +20,7 @@ CREATE TABLE "lead" (
   "country" varchar(50),
   "bd_in_charge" varchar(20) NOT NULL,
   "background" text
+  -- Might need to add company_type market maker, broker prop firm etc
 );
 
 -- Customer Table
