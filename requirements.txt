@@ -9,6 +9,7 @@ click==8.1.8
 Flask==3.1.0
 flask-cors==5.0.1
 Flask-RESTful==0.3.10
+Flask-SQLAlchemy==3.1.1
 gitdb==4.0.12
 GitPython==3.1.44
 google-auth==2.39.0
@@ -22,6 +23,7 @@ Jinja2==3.1.6
 jsonschema==4.23.0
 jsonschema-specifications==2025.4.1
 MarkupSafe==3.0.2
+marshmallow==4.0.0
 narwhals==1.38.0
 numpy==2.0.2
 oauth2client==4.1.3

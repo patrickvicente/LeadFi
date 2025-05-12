@@ -1,16 +1,33 @@
 from flask import Flask
 from flask_restful import Api
 from flask_cors import CORS
-from resources.lead import LeadResource
+from flask_sqlalchemy import SQLAlchemy
+from api.resources.lead import LeadResource
+from db.db_config import db, get_db_url
+import os
 
-# Creates  Flas app instance
-app = Flask(__name__)
-CORS(app)
+def create_app():
+    """
+    Application factory function.
+    Sets up the Flask app, configures the database, CORS, and API resources.
+    """
+    app = Flask(__name__)
+    
+    # Configuration: Set up the database URI
+    app.config['SQLALCHEMY_DATABASE_URI'] = get_db_url()
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    
+    # Initialize extensions
+    CORS(app)
+    db.init_app(app)
+    api = Api(app)
+    
+    # Register resources
+    api.add_resource(LeadResource, '/api/leads', '/api/leads/<int:id>')
+    
+    return app
 
-api = Api(app)
-
-#Register 'api/leads' endpoint
-api.add_resource(LeadResource, '/api/leads', '/api/leads/<int:id>')
+app = create_app()
 
 if __name__ == '__main__':
     app.run(debug=True)
