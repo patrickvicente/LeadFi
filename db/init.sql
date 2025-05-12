@@ -3,6 +3,7 @@ DROP TABLE IF EXISTS activity;
 DROP TABLE IF EXISTS daily_trading_volume;
 DROP TABLE IF EXISTS customer;
 DROP TABLE IF EXISTS lead;
+DROP TABLE IF EXISTS contact;
 
 -- Lead Table
 CREATE TABLE "lead" (
@@ -14,28 +15,41 @@ CREATE TABLE "lead" (
   "phone_number" varchar(20),
   "source" varchar(50) NOT NULL, -- [gate, linkedin, hubspot, conference, referral]
   "status" varchar(50), -- 1. lead generated 2. proposal 3. negotiation 4. registration 5. integration 6. closed won 7. lost
-  "date_created" timestamp NOT NULL,
+  "date_created" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "linkedin_url" varchar(255),
   "company_name" varchar(120),
   "country" varchar(50),
   "bd_in_charge" varchar(20) NOT NULL,
-  "background" text
+  "background" text,
+  "is_converted" BOOLEAN DEFAULT FALSE -- change to true once converted
   -- Might need to add company_type market maker, broker prop firm etc
   -- Add udpated at timestamp
 );
 
 -- Customer Table
 CREATE TABLE "customer" (
-  "customer_uid" char(8) PRIMARY KEY NOT NULL,
-  "lead_id" int,
-  "type" varchar(20),
+  "customer_uid" char(8) PRIMARY KEY NOT NULL, -- UID from internal system
+  "type" varchar(50),
   "company_name" varchar(120),
   "date_converted" timestamp NOT NULL,
   "is_closed" char(1) DEFAULT 'N' NOT NULL, -- 'N' for non closed and 'Y' for closed
-  "date_closed" timestamp
+  "date_closed" timestamp,
+  "country" varchar(50),
+  "date_created" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Daily TradinG Volume Table
+-- Contact Table
+CREATE TABLE "contact" (
+  "contact_id" serial PRIMARY KEY NOT NULL, -- Unique ID for the contact
+  "customer_uid" char(8) NOT NULL, -- References customer
+  "lead_id" int NOT NULL, -- References lead
+  "is_primary_contact" BOOLEAN DEFAULT TRUE,
+  "date_added" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, -- When the contact was added
+  FOREIGN KEY ("customer_uid") REFERENCES "customer" ("customer_uid") ON DELETE CASCADE,
+  FOREIGN KEY ("lead_id") REFERENCES "lead" ("lead_id") ON DELETE CASCADE
+);
+
+-- Daily Trading Volume Table
 CREATE TABLE "daily_trading_volume" (
   "customer_uid" char(8) NOT NULL,
   "date" date NOT NULL,
@@ -65,8 +79,6 @@ CREATE TABLE "activity" (
 );
 
 COMMENT ON TABLE "daily_trading_volume" IS 'Composite PK ensures unique daily trading record per customer';
-
-ALTER TABLE "customer" ADD FOREIGN KEY ("lead_id") REFERENCES "lead" ("lead_id");
 
 ALTER TABLE "daily_trading_volume" ADD FOREIGN KEY ("customer_uid") REFERENCES "customer" ("customer_uid");
 
