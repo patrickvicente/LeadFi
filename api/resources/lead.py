@@ -1,8 +1,12 @@
 from flask_restful import Resource
 from flask import request
-from api.models.lead import Lead           # Updated import path
-from api.schemas.lead_schema import LeadSchema  # Updated import path
-from db.db_config import db            # Updated import path
+from api.models.lead import Lead           
+from api.models.customer import Customer
+from api.models.contact import Contact
+from api.schemas.lead_schema import LeadSchema  
+from api.schemas.customer_schema import CustomerSchema
+from api.schemas.contact_schema import ContactSchema
+from db.db_config import db            
 from http import HTTPStatus            # For readable HTTP status codes
 
 class LeadResource(Resource):
@@ -10,6 +14,9 @@ class LeadResource(Resource):
         # Initialize Marshmallow schemas for single and multiple leads
         self.schema = LeadSchema()
         self.schema_many = LeadSchema(many=True)
+        # schema for conversion
+        self.customer_schema = CustomerSchema()
+        self.contact_schema = ContactSchema()
 
     def get(self, id=None):
         """
@@ -110,3 +117,48 @@ class LeadResource(Resource):
         except Exception as e:
             db.session.rollback()
             return {'message': 'Error deleting lead', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+    
+    def post(self, id):
+        """
+        POST /api/leads/<id>/convert-to-customer
+        Convert a lead to a customer
+        """
+        # Fetch the lead or return 404
+        lead = Lead.query.get_or_404(id)
+        json_data = request.get_json()
+
+        # Ensure JSON data is provided
+        if not json_data:
+            return {'message': 'No input data provided'}, HTTPStatus.BAD_REQUEST
+
+        # validate conversion criteria
+        if not lead.is_converted:
+            # Validate input data using Marshmallow shcema
+            errors = self.customer_schema.validate(json_data)
+            if errors:
+                return {'errors': errors}, HTTPStatus.BAD_REQUEST
+            
+            try:
+                # Create a new customer instance and add to the session
+                customer = Customer(**json_data)
+                db.session.add(customer)
+                
+                # Create a new contact instance and add to the session
+                contact = Contact(
+                    customer_uid= customer.customer_uid,
+                    lead_id= lead.lead_id
+                )
+                db.session.add(contact)
+
+                lead.is_converted = True
+                db.session.commit()
+
+                return {'customer': self.customer_schema.dump(customer)}, HTTPStatus.OK
+            
+            except Exception as e:
+                db.session.rollback()
+                return {'message': 'Error converting lead to customer', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+
+        # If the lead is already converted
+        return {'message': 'Lead has already been converted as a customer'}, HTTPStatus.BAD_REQUEST
+

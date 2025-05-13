@@ -1,4 +1,3 @@
-# api/schemas/lead_schema.py
 from marshmallow import Schema, fields, validate
 
 class LeadSchema(Schema):
@@ -19,4 +18,4 @@ class LeadSchema(Schema):
     linkedin_url = fields.Str(allow_none=True)
     background = fields.Str(allow_none=True)
     date_created = fields.DateTime(dump_only=True)
-    is_converted = fields.Boolean(dump_only=True)
+    is_converted = fields.Boolean()

@@ -23,7 +23,12 @@ def create_app():
     api = Api(app)
     
     # Register resources
-    api.add_resource(LeadResource, '/api/leads', '/api/leads/<int:id>')
+    api.add_resource(
+        LeadResource, 
+        '/api/leads', 
+        '/api/leads/<int:id>',
+        '/api/leads/<int:id>/convert-to-customer'
+        )
     
     return app
 
