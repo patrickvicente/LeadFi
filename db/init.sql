@@ -30,8 +30,7 @@ CREATE TABLE "lead" (
 CREATE TABLE "customer" (
   "customer_uid" char(8) PRIMARY KEY NOT NULL, -- UID from internal system
   "type" varchar(50),
-  "company_name" varchar(120),
-  "date_converted" timestamp NOT NULL,
+  "name" varchar(120) NOT NULL,
   "is_closed" char(1) DEFAULT 'N' NOT NULL, -- 'N' for non closed and 'Y' for closed
   "date_closed" timestamp,
   "country" varchar(50),
