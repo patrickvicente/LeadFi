@@ -26,8 +26,7 @@ def create_app():
     api.add_resource(
         LeadResource, 
         '/api/leads', 
-        '/api/leads/<int:id>',
-        '/api/leads/<int:id>/convert-to-customer'
+        '/api/leads/<int:id>'
         )
     
     return app

@@ -53,30 +53,69 @@ class LeadResource(Resource):
         lead = Lead.query.get_or_404(id)
         return {'lead': self.schema.dump(lead)}, HTTPStatus.OK
 
-    def post(self):
+    def post(self, id=None):
         """
-        POST /api/leads
-        Create a new lead from JSON request data.
+        POST /api/leads - Create a new lead from JSON request data.
+        POST /api/leads/<id>/convert-to-customer - convert a lead to customer
         """
-        json_data = request.get_json()
+        if id is None: 
+            # Create lead logic
+            json_data = request.get_json()
+            errors = self.schema.validate(json_data)
+            if errors:
+                return {'errors': errors}, HTTPStatus.BAD_REQUEST
 
-        # Validate input data using Marshmallow schema
-        errors = self.schema.validate(json_data)
-        if errors:
-            return {'errors': errors}, HTTPStatus.BAD_REQUEST
+            try:
+                # Create a new Lead instance and add to the session
+                lead = Lead(**json_data)
+                db.session.add(lead)
+                db.session.commit()
+                # Return the created lead, serialized
+                return {'lead': self.schema.dump(lead)}, HTTPStatus.CREATED
 
-        try:
-            # Create a new Lead instance and add to the session
-            lead = Lead(**json_data)
-            db.session.add(lead)
-            db.session.commit()
-            # Return the created lead, serialized
-            return {'lead': self.schema.dump(lead)}, HTTPStatus.CREATED
+            except Exception as e:
+                # Rollback in case of error and return error message
+                db.session.rollback()
+                return {'message': 'Error creating lead', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+        
+        else:
+            # Convert Lead Logic
+            lead = Lead.query.get_or_404(id) # Fetch the lead or return 404
+            json_data = request.get_json()
 
-        except Exception as e:
-            # Rollback in case of error and return error message
-            db.session.rollback()
-            return {'message': 'Error creating lead', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+            # Ensure JSON data is provided
+            if not json_data:
+                return {'message': 'No input data provided'}, HTTPStatus.BAD_REQUEST
+
+            try:
+                # Create a new customer instance and add to the session
+                customer = Customer(**json_data)
+                db.session.add(customer)
+                
+                # Create a new contact instance and add to the session
+                contact = Contact(
+                    customer_uid= customer.customer_uid,
+                    lead_id= lead.lead_id
+                )
+                db.session.add(contact)
+
+                lead.is_converted = True
+                db.session.commit()
+
+                return {
+                    'message': 'Lead successfully converted to customer',
+                    'customer': self.customer_schema.dump(customer),
+                    'contact': self.contact_schema.dump(contact)
+                    }, HTTPStatus.OK
+            
+            except Exception as e:
+                db.session.rollback()
+                return {'message': 'Error converting lead to customer', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+
+        # If the lead is already converted
+        return {'message': 'Lead has already been converted as a customer'}, HTTPStatus.BAD_REQUEST
+
+
 
     def put(self, id):
         """
@@ -117,48 +156,3 @@ class LeadResource(Resource):
         except Exception as e:
             db.session.rollback()
             return {'message': 'Error deleting lead', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
-    
-    def post(self, id):
-        """
-        POST /api/leads/<id>/convert-to-customer
-        Convert a lead to a customer
-        """
-        # Fetch the lead or return 404
-        lead = Lead.query.get_or_404(id)
-        json_data = request.get_json()
-
-        # Ensure JSON data is provided
-        if not json_data:
-            return {'message': 'No input data provided'}, HTTPStatus.BAD_REQUEST
-
-        # validate conversion criteria
-        if not lead.is_converted:
-            # Validate input data using Marshmallow shcema
-            errors = self.customer_schema.validate(json_data)
-            if errors:
-                return {'errors': errors}, HTTPStatus.BAD_REQUEST
-            
-            try:
-                # Create a new customer instance and add to the session
-                customer = Customer(**json_data)
-                db.session.add(customer)
-                
-                # Create a new contact instance and add to the session
-                contact = Contact(
-                    customer_uid= customer.customer_uid,
-                    lead_id= lead.lead_id
-                )
-                db.session.add(contact)
-
-                lead.is_converted = True
-                db.session.commit()
-
-                return {'customer': self.customer_schema.dump(customer)}, HTTPStatus.OK
-            
-            except Exception as e:
-                db.session.rollback()
-                return {'message': 'Error converting lead to customer', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
-
-        # If the lead is already converted
-        return {'message': 'Lead has already been converted as a customer'}, HTTPStatus.BAD_REQUEST
-
