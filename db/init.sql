@@ -52,19 +52,28 @@ CREATE TABLE "contact" (
 CREATE TABLE "daily_trading_volume" (
   "customer_uid" char(8) NOT NULL,
   "date" date NOT NULL,
-  "spot_trading_volume" numeric(18,2),
   "spot_maker_trading_volume" numeric(18,2),
   "spot_taker_trading_volume" numeric(18,2),
   "spot_maker_fees" numeric(6,2),
   "spot_taker_fees" numeric(6,2),
-  "futures_trading_volume" numeric(18,2),
   "futures_maker_trading_volume" numeric(18,2),
   "futures_taker_trading_volume" numeric(18,2),
   "futures_maker_fees" numeric(6,2),
   "futures_taker_fees" numeric(6,2),
-  "total_net_fees" numeric(8,2),
   "user_assets" numeric(18,2),
-  PRIMARY KEY ("customer_uid", "date")
+  PRIMARY KEY ("customer_uid", "date"),
+  FOREIGN KEY ("customer_uid") REFERENCES "customer" ("customer_uid")
+);
+
+-- VIP History Table
+CREATE TABLE "vip_history" (
+  "customer_uid" char(8) NOT NULL,
+  "date" date NOT NULL,
+  "vip_level" char(2) NOT NULL DEFAULT '0',
+  "spot_mm_level" char(1) DEFAULT '0',
+  "futures_mm_level" char(1) DEFAULT '0',
+  PRIMARY KEY ("customer_uid", "date"),
+  FOREIGN KEY ("customer_uid") REFERENCES "customer" ("customer_uid")
 );
 
 -- Activity table
@@ -78,8 +87,6 @@ CREATE TABLE "activity" (
 );
 
 COMMENT ON TABLE "daily_trading_volume" IS 'Composite PK ensures unique daily trading record per customer';
-
-ALTER TABLE "daily_trading_volume" ADD FOREIGN KEY ("customer_uid") REFERENCES "customer" ("customer_uid");
 
 ALTER TABLE "activity" ADD FOREIGN KEY ("lead_id") REFERENCES "lead" ("lead_id");
 

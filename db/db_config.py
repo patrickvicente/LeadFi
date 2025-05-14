@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import create_engine
 
 # Load environment variables from .env
 load_dotenv()
@@ -20,3 +21,6 @@ DB_CONFIG = {
 # Build DB URL
 def get_db_url():
     return f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+
+# Create SQLAlchemy engine
+engine = create_engine(get_db_url())
