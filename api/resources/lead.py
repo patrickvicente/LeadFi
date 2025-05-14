@@ -124,6 +124,8 @@ class LeadResource(Resource):
         """
         lead = Lead.query.get_or_404(id)  # Fetch the lead or return 404
         json_data = request.get_json()
+        if not json_data:
+            return {'message': 'No input data provided'}, HTTPStatus.BAD_REQUEST
 
         # Validate input data (partial=True allows partial updates)
         errors = self.schema.validate(json_data, partial=True)

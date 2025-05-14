@@ -11,6 +11,12 @@ class Customer(db.Model):
     is_closed = db.Column(db.Boolean, default=False)
     date_closed = db.Column(db.DateTime)
     date_created = db.Column(db.DateTime, default=datetime.utcnow)
+    contacts = db.relationship(
+        'Contact',
+        backref=db.backref('customer', lazy=True),
+        lazy='select',
+        cascade='all, delete-orphan'
+    )
 
     def to_dict(self):
         return {

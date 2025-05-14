@@ -5,15 +5,19 @@ class Contact(db.Model):
     __tablename__ = 'contact'
 
     contact_id = db.Column(db.Integer, primary_key=True)
-    customer_uid = db.Column(db.String(8), db.ForeignKey('customer.customer_uid'), nullable=False)
-    lead_id = db.Column(db.Integer, db.ForeignKey('lead.lead_id'), nullable=False)
+    customer_uid = db.Column(
+        db.String(8), 
+        db.ForeignKey('customer.customer_uid', ondelete='CASCADE'), 
+        nullable=False
+    )
+    lead_id = db.Column(
+        db.Integer, 
+        db.ForeignKey('lead.lead_id', ondelete='CASCADE'), 
+        nullable=False
+    )
     is_primary_contact = db.Column(db.Boolean, default=True)
     date_added = db.Column(db.DateTime, default=datetime.utcnow)
-
-    # Relationships (optional, for easier access to related data)
-    customer = db.relationship('Customer', backref='contacts', lazy=True)
-    lead = db.relationship('Lead', backref='contacts', lazy=True)
-
+    
     def to_dict(self):
         return {
             'contact_id': self.contact_id,

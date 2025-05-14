@@ -19,6 +19,12 @@ class Lead(db.Model):
     bd_in_charge = db.Column(db.String(20), nullable=False)
     background = db.Column(db.Text)
     is_converted = db.Column(db.Boolean, default=False)
+    contacts = db.relationship(
+        'Contact',
+        backref=db.backref('lead', lazy=True),
+        lazy='select',
+        cascade='all, delete-orphan'
+    )
 
     def to_dict(self):
         return {
