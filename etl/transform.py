@@ -3,13 +3,19 @@ import pandas as pd
 import numpy as np
 
 def clean_leads(df):
-    print(df.columns)
-    print(df.head())
+    """
+    Clean and transform lead data from Google Sheets
+    """
+    # Store original indices and upload_status
+    original_indices = df.index
 
     # normalize column names
     df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
-    print(df.columns)
     df = df.drop_duplicates()
+
+    # Remove upload_status column before cleaning
+    if 'upload_status' in df.columns:
+        df = df.drop('upload_status', axis=1)
 
     # Remove rows where both email and telegram are missing
     df = df[df['email'].notna() | df['telegram'].notna()]
@@ -17,7 +23,7 @@ def clean_leads(df):
     # Replace blank strings or whitespace-only strings with NaN (null)
     df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
 
-    # Clean and normalize values - handle NaN values first
+    # Clean and normalize values
     string_columns = [
         'full_name', 'email', 'telegram', 'source', 'status',
         'linkedin_url', 'country', 'bd_in_charge', 'company_name'
@@ -25,16 +31,11 @@ def clean_leads(df):
     
     for col in string_columns:
         if col in df.columns:
-            # First convert to string, handling NaN values
             df[col] = df[col].fillna('').astype(str)
-            # Then apply string operations
             if col == 'full_name':
                 df[col] = df[col].str.title()
             else:
                 df[col] = df[col].str.lower()
-
-    print(df.columns)
-    print(df.head())
 
     # validates status
     valid_status = [
@@ -47,7 +48,7 @@ def clean_leads(df):
         '7. lost']
     df = df[df["status"].isin(valid_status)]
 
-    # --- Fetch existing emails and telegram from DB
+    # Check for existing records in database
     existing = pd.read_sql("""
         SELECT email, telegram FROM lead
         WHERE email IS NOT NULL OR telegram IS NOT NULL
@@ -57,15 +58,17 @@ def clean_leads(df):
     existing['email'] = existing['email'].fillna('').astype(str).str.strip().str.lower()
     existing['telegram'] = existing['telegram'].fillna('').astype(str).str.strip().str.lower()
 
-    # --- Filter out rows already in DB based on email or telegram
+    # Filter out rows already in DB based on email or telegram
     df = df[
-        ~df['email'].isin(existing['email']) &
+        ~df['email'].isin(existing['email']) |
         ~df['telegram'].isin(existing['telegram'])
     ]
 
-    return df
+    # Return both the cleaned data and the original indices
+    return df, original_indices
 
 def clean_apollo_csv(df):
+
     # normalize column names
     df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
     df = df.rename(columns={
@@ -127,9 +130,16 @@ def clean_daily_trading_volume(df):
     """
     Clean and transform daily trading volume data from Google Sheets
     """
+    # Store original indices
+    original_indices = df.index
+    
     # Normalize column names
     df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
     
+    # Remove upload_status column before cleaning
+    if 'upload_status' in df.columns:
+        df = df.drop('upload_status', axis=1)
+
     # Define required columns
     required_columns = [
         'customer_uid',
@@ -184,6 +194,9 @@ def clean_daily_trading_volume(df):
     trading_df['date'] = pd.to_datetime(trading_df['date'])
     trading_df['customer_uid'] = trading_df['customer_uid'].astype(str).str.ljust(8)
     
+    # Remove duplicates within the trading volume data
+    trading_df = trading_df.drop_duplicates(subset=['customer_uid', 'date'])
+
     # Convert numeric columns
     numeric_columns = [
         'spot_maker_trading_volume',
@@ -203,8 +216,51 @@ def clean_daily_trading_volume(df):
     # Clean VIP history data
     vip_df['date'] = pd.to_datetime(vip_df['date'])
     vip_df['customer_uid'] = vip_df['customer_uid'].astype(str).str.zfill(8)
+
+    # Remove duplicates within the VIP history data
+    vip_df = vip_df.drop_duplicates(subset=['customer_uid', 'date'])
+
+    # Clean VIP levels
     vip_df['vip_level'] = vip_df['vip_level'].fillna('0').astype(str).str[:2]
     vip_df['spot_mm_level'] = vip_df['spot_mm_level'].fillna('0').astype(str).str[:1]
     vip_df['futures_mm_level'] = vip_df['futures_mm_level'].fillna('0').astype(str).str[:1]
     
-    return trading_df, vip_df
+    # Check for existing records in database
+    try:
+        existing_trading = pd.read_sql("""
+            SELECT customer_uid, date 
+            FROM daily_trading_volume
+        """, con=engine)
+        
+        existing_vip = pd.read_sql("""
+            SELECT customer_uid, date 
+            FROM vip_history
+        """, con=engine)
+        
+        # Create composite keys for comparison
+        existing_trading['key'] = existing_trading['customer_uid'] + '_' + existing_trading['date'].astype(str)
+        existing_vip['key'] = existing_vip['customer_uid'] + '_' + existing_vip['date'].astype(str)
+        
+        trading_df['key'] = trading_df['customer_uid'] + '_' + trading_df['date'].astype(str)
+        vip_df['key'] = vip_df['customer_uid'] + '_' + vip_df['date'].astype(str)
+        
+        # Filter out existing records
+        new_trading_df = trading_df[~trading_df['key'].isin(existing_trading['key'])]
+        new_vip_df = vip_df[~vip_df['key'].isin(existing_vip['key'])]
+        
+        # Keep only records that are new in both tables
+        common_keys = set(new_trading_df['key']) & set(new_vip_df['key'])
+        new_trading_df = new_trading_df[new_trading_df['key'].isin(common_keys)]
+        new_vip_df = new_vip_df[new_vip_df['key'].isin(common_keys)]
+        
+        # Drop the key columns
+        new_trading_df = new_trading_df.drop('key', axis=1)
+        new_vip_df = new_vip_df.drop('key', axis=1)
+        
+    except Exception as e:
+        print(f"Error checking existing records: {str(e)}")
+        # If there's an error, assume no existing records
+        new_trading_df = trading_df
+        new_vip_df = vip_df
+    
+    return new_trading_df, new_vip_df, original_indices

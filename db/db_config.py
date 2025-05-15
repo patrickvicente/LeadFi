@@ -22,5 +22,8 @@ DB_CONFIG = {
 def get_db_url():
     return f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
 
-# Create SQLAlchemy engine
+# Create single engine instance
 engine = create_engine(get_db_url())
+
+# Initialize Flask-SQLAlchemy with the same URL
+# db.init_app(None)  # You'll need to pass your Flask app here if you have one
