@@ -17,6 +17,15 @@ def clean_leads(df):
     if 'upload_status' in df.columns:
         df = df.drop('upload_status', axis=1)
 
+    # Remove rows where required fields are missing
+    required_fields = ['full_name', 'company_name', 'source', 'bd_in_charge']
+    df = df.dropna(subset=required_fields)
+
+    # Set is_converted to False if it's null or empty
+    df['is_converted'] = df['is_converted'].fillna(False)
+    df['is_converted'] = df['is_converted'].replace('', False)
+    df['is_converted'] = df['is_converted'].astype(bool)
+    
     # Remove rows where both email and telegram are missing
     df = df[df['email'].notna() | df['telegram'].notna()]
 
@@ -132,7 +141,7 @@ def clean_daily_trading_volume(df):
     """
     # Store original indices
     original_indices = df.index
-    
+
     # Normalize column names
     df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
     

@@ -2,11 +2,9 @@ from etl.extract import extract_sheet, get_sheet, update_sheet_status
 from etl.transform import clean_leads, clean_daily_trading_volume
 from etl.load import load_to_postgres
 from db.db_config import engine
+import pandas as pd
 
 def ingest_leads():
-    """
-    Extract, transform, and load lead data from Google Sheets
-    """
     print("Starting ETL for Leads from Google Sheets >>> PostgreSQL")
     
     try:
@@ -16,7 +14,7 @@ def ingest_leads():
             print(f"No data found in the Leads sheet.")
             return
         
-        # Replace blanks (NaN) int he upload_status column with 'PENDING'
+        # Replace blanks (NaN) in the upload_status column with 'PENDING'
         df['upload_status'] = df['upload_status'].fillna('PENDING')
         df['upload_status'] = df['upload_status'].replace('', 'PENDING')
 
@@ -35,18 +33,35 @@ def ingest_leads():
         
         # 3. Load and start a transaction
         sheet = get_sheet("Leads")
+        successful_indices = []
+        failed_indices = []
+        
         with engine.begin() as connection:
             try:
-                # Load data using the existing load_to_postgres
-                load_to_postgres(leads_df, 'lead')
-                # Update status in Google Sheets using original indices
-                update_sheet_status(sheet, original_indices, 'PROCESSED')
-            
+                # Process each row individually
+                for idx, row in leads_df.iterrows():
+                    try:
+                        # Create a single-row DataFrame
+                        row_df = pd.DataFrame([row])
+                        # Load single row
+                        load_to_postgres(row_df, 'lead')
+                        successful_indices.append(original_indices[idx])
+                    except Exception as e:
+                        print(f"Error processing row {idx}: {e}")
+                        failed_indices.append(original_indices[idx])
+                
+                # Update status in Google Sheets
+                if successful_indices:
+                    update_sheet_status(sheet, successful_indices, 'PROCESSED')
+                if failed_indices:
+                    update_sheet_status(sheet, failed_indices, 'ERROR')
             
             except Exception as e:
-                # Update status to ERROR in Google Sheets
                 print(f"Error during loading: {e}")
-                update_sheet_status(sheet, original_indices, 'ERROR')
+                # Mark all remaining rows as ERROR
+                remaining_indices = [idx for idx in original_indices if idx not in successful_indices]
+                if remaining_indices:
+                    update_sheet_status(sheet, remaining_indices, 'ERROR')
                 raise
 
     except Exception as e:
@@ -86,19 +101,47 @@ def ingest_daily_trading_volume():
         
         # 3. Load and start a transaction
         sheet = get_sheet("Daily Trading Volume")
+        successful_indices = []
+        failed_indices = []
+        
         with engine.begin() as connection:
             try:
-                # Load data using load_to_postgres
-                load_to_postgres(trading_df, 'daily_trading_volume')
-                load_to_postgres(vip_df, 'vip_history')
-
-                # Update status in Google sheets only for successfully processed records
-                update_sheet_status(sheet, original_indices, 'PROCESSED')
+                # Process each row individually
+                for idx, (trading_row, vip_row) in enumerate(zip(trading_df.itertuples(), vip_df.itertuples())):
+                    try:
+                        # Create single-row DataFrames and convert to dict
+                        trading_dict = {k: v for k, v in trading_row._asdict().items() 
+                                     if k != 'Index'}  # Remove Index from dict
+                        vip_dict = {k: v for k, v in vip_row._asdict().items() 
+                                  if k != 'Index'}  # Remove Index from dict
+                        
+                        # Create DataFrames from dicts
+                        trading_row_df = pd.DataFrame([trading_dict])
+                        vip_row_df = pd.DataFrame([vip_dict])
+                        
+                        # Load single rows
+                        load_to_postgres(trading_row_df, 'daily_trading_volume')
+                        load_to_postgres(vip_row_df, 'vip_history')
+                        
+                        successful_indices.append(original_indices[idx])
+                    except Exception as e:
+                        failed_indices.append(original_indices[idx])
+                
+                # Update status in Google Sheets
+                if successful_indices:
+                    update_sheet_status(sheet, successful_indices, 'PROCESSED')
+                    print(f"Successfully processed {len(successful_indices)} rows")
+                
+                if failed_indices:
+                    update_sheet_status(sheet, failed_indices, 'ERROR')
+                    print(f"Failed to process {len(failed_indices)} rows")
             
             except Exception as e:
-                # Update status to ERROR in Google Sheets
                 print(f"Error during loading: {e}")
-                update_sheet_status(sheet, original_indices, 'ERROR')
+                # Mark all remaining rows as ERROR
+                remaining_indices = [idx for idx in original_indices if idx not in successful_indices]
+                if remaining_indices:
+                    update_sheet_status(sheet, remaining_indices, 'ERROR')
                 raise
     
     except Exception as e:

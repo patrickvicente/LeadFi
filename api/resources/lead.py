@@ -56,7 +56,7 @@ class LeadResource(Resource):
     def post(self, id=None):
         """
         POST /api/leads - Create a new lead from JSON request data.
-        POST /api/leads/<id>/convert-to-customer - convert a lead to customer
+        POST /api/leads/<id> - convert a lead to customer
         """
         if id is None: 
             # Create lead logic
