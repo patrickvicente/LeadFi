@@ -1,6 +1,7 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
+import time
 
 # extracts data from google sheet
 def extract_sheet(sheet_name): # 'Leads' | 'Customer' | 'Daily Trading Volume' | 'Activity'
@@ -48,7 +49,8 @@ def update_sheet_status(sheet, row_indices, status):
         for idx in row_indices:
             # Add 2 to account for header row and 0-based indexing
             sheet.update_cell(idx + 2, upload_status_col, status)
-        
+            time.sleep(2) # pause to limit hitting quota
+
         print(f"Status updated successfully") 
     except Exception as e:
         print(f"Error updating sheet status: {str(e)}")
