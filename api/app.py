@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from flask_restful import Api
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -23,6 +23,24 @@ def create_app():
     CORS(app)
     db.init_app(app)
     api = Api(app)
+
+    #logging middleware
+    @app.before_request
+    def log_request_info():
+        print("\nIncoming request:")
+        print(f"Method: {request.method}")
+        print(f"URL: {request.url}")
+        print(f"Headers: {dict(request.headers)}")
+        print(f"Data: {request.get_data()}")
+        print(f"JSON: {request.get_json(silent=True)}")
+
+    @app.after_request
+    def log_response_info(response):
+        print("\nOutgoing response:")
+        print(f"Status: {response.status_code}")
+        print(f"Headers: {dict(response.headers)}")
+        print(f"Data: {response.get_data()}")
+        return response
     
     # Register resources
     api.add_resource(LeadResource, '/api/leads', '/api/leads/<int:id>')
@@ -34,4 +52,4 @@ def create_app():
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

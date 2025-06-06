@@ -53,8 +53,10 @@ def ingest_leads():
                 # Update status in Google Sheets
                 if successful_indices:
                     update_sheet_status(sheet, successful_indices, 'PROCESSED')
+                    print(f"{str(len(successful_indices))} successfully saved to Database.")
                 if failed_indices:
                     update_sheet_status(sheet, failed_indices, 'ERROR')
+                    print(f"{str(len(failed_indices))} failed saving to Database.")
             
             except Exception as e:
                 print(f"Error during loading: {e}")

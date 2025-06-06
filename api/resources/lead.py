@@ -54,66 +54,44 @@ class LeadResource(Resource):
         return {'lead': self.schema.dump(lead)}, HTTPStatus.OK
 
     def post(self, id=None):
-        """
-        POST /api/leads - Create a new lead from JSON request data.
-        POST /api/leads/<id> - convert a lead to customer
-        """
         if id is None: 
-            # Create lead logic
             json_data = request.get_json()
             errors = self.schema.validate(json_data)
             if errors:
                 return {'errors': errors}, HTTPStatus.BAD_REQUEST
 
             try:
-                # Create a new Lead instance and add to the session
                 lead = Lead(**json_data)
                 db.session.add(lead)
                 db.session.commit()
-                # Return the created lead, serialized
                 return {'lead': self.schema.dump(lead)}, HTTPStatus.CREATED
-
             except Exception as e:
-                # Rollback in case of error and return error message
                 db.session.rollback()
                 return {'message': 'Error creating lead', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
         
-        else:
-            # Convert Lead Logic
+        try:
             lead = Lead.query.get_or_404(id)
-            
-            # Check if lead is already converted
             if lead.is_converted:
                 return {'message': 'Lead has already been converted as a customer'}, HTTPStatus.BAD_REQUEST
 
             json_data = request.get_json()
-            print(f"Received JSON data: {json_data}")  # Debug print
-
-            # Ensure JSON data is provided
             if not json_data:
                 return {'message': 'No input data provided'}, HTTPStatus.BAD_REQUEST
 
-            # Validate customer data
             errors = self.customer_schema.validate(json_data)
             if errors:
-                print(f"Validation errors: {errors}")  # Debug print
-                return {
-                    'message': 'Validation error',
-                    'errors': errors
-                }, HTTPStatus.BAD_REQUEST  # Changed from 403 to 400
+                return {'message': 'Validation error', 'errors': errors}, HTTPStatus.BAD_REQUEST
 
             try:
-                # Create a new customer instance and add to the session
                 customer = Customer(**json_data)
                 db.session.add(customer)
                 
-                # Create a new contact instance and add to the session
                 contact = Contact(
                     customer_uid=customer.customer_uid,
                     lead_id=lead.lead_id
                 )
                 db.session.add(contact)
-
+                
                 lead.is_converted = True
                 db.session.commit()
 
@@ -125,11 +103,11 @@ class LeadResource(Resource):
             
             except Exception as e:
                 db.session.rollback()
-                print(f"Database error: {str(e)}")  # Debug print
-                return {
-                    'message': 'Error converting lead to customer',
-                    'error': str(e)
-                }, HTTPStatus.INTERNAL_SERVER_ERROR
+                return {'message': 'Error converting lead to customer', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+                
+        except Exception as e:
+            return {'message': 'Error processing request', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+
     def put(self, id):
         """
         PUT /api/leads/<id>
