@@ -1,7 +1,7 @@
 from marshmallow import Schema, fields
 
 class CustomerSchema(Schema):
-    customer_uid = fields.Str(required=True)
+    customer_uid = fields.Int(required=True)
     type = fields.String(allow_none=True) # May need to validate in the future
     name = fields.String(required=True)
     country = fields.String(allow_none=True)

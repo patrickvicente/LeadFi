@@ -4,14 +4,14 @@ from datetime import datetime
 class Customer(db.Model):
     __tablename__ = 'customer'
 
-    customer_uid = db.Column(db.String(8), primary_key=True, nullable=False)
+    customer_uid = db.Column(db.Integer, primary_key=True, nullable=False)
     name = db.Column(db.String(120), nullable=False)
     type = db.Column(db.String(50))
     country = db.Column(db.String(50))
     is_closed = db.Column(db.Boolean, default=False)
     date_closed = db.Column(db.DateTime)
     date_created = db.Column(db.DateTime, default=datetime.utcnow)
-    # relationship woith contacts
+    # relationship with contacts
     contacts = db.relationship(
         'Contact',
         backref=db.backref('customer', lazy=True),

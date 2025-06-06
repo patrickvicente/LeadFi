@@ -6,7 +6,7 @@ class Contact(db.Model):
 
     contact_id = db.Column(db.Integer, primary_key=True)
     customer_uid = db.Column(
-        db.String(8), 
+        db.Integer, 
         db.ForeignKey('customer.customer_uid', ondelete='CASCADE'), 
         nullable=False
     )
