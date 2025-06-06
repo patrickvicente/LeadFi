@@ -19,3 +19,4 @@ class LeadSchema(Schema):
     background = fields.Str(allow_none=True)
     date_created = fields.DateTime(dump_only=True)
     is_converted = fields.Boolean()
+    type = fields.String(required=True)

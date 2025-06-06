@@ -21,9 +21,8 @@ CREATE TABLE "lead" (
   "country" varchar(50),
   "bd_in_charge" varchar(20) NOT NULL,
   "background" text,
-  "is_converted" BOOLEAN DEFAULT FALSE -- change to true once converted
-  -- Might need to add company_type market maker, broker prop firm etc
-  -- Add udpated at timestamp
+  "is_converted" BOOLEAN DEFAULT FALSE. -- change to true once converted
+  "type" varchar(50) NOT NULL
 );
 
 -- Customer Table
@@ -31,7 +30,7 @@ CREATE TABLE "customer" (
   "customer_uid" INTEGER PRIMARY KEY NOT NULL, -- Changed from char(8) to INTEGER
   "type" varchar(50),
   "name" varchar(120) NOT NULL,
-  "is_closed" char(1) DEFAULT 'N' NOT NULL, -- 'N' for non closed and 'Y' for closed
+  "is_closed" BOOLEAN DEFAULT FALSE,
   "date_closed" timestamp,
   "country" varchar(50),
   "date_created" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP

@@ -13,10 +13,6 @@ def clean_leads(df):
     df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
     df = df.drop_duplicates()
 
-    # Remove upload_status column before cleaning
-    if 'upload_status' in df.columns:
-        df = df.drop('upload_status', axis=1)
-
     # Set is_converted to False if it's null, empty, or "FALSE"
     df['is_converted'] = df['is_converted'].fillna(False)
     df['is_converted'] = df['is_converted'].replace('', False)
@@ -38,7 +34,7 @@ def clean_leads(df):
     # Clean and normalize values
     string_columns = [
         'full_name', 'email', 'telegram', 'source', 'status',
-        'linkedin_url', 'country', 'bd_in_charge', 'company_name'
+        'linkedin_url', 'country', 'bd_in_charge', 'company_name', 'type'
     ]
     
     for col in string_columns:
@@ -75,6 +71,10 @@ def clean_leads(df):
         ~df['email'].isin(existing['email']) |
         ~df['telegram'].isin(existing['telegram'])
     ]
+
+    # Drop upload_status and customer_uid columns after all processing
+    columns_to_drop = ['upload_status', 'customer_uid']
+    df = df.drop(columns=[col for col in columns_to_drop if col in df.columns])
 
     # Return both the cleaned data and the original indices
     return df, original_indices

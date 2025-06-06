@@ -80,12 +80,27 @@ class LeadResource(Resource):
         
         else:
             # Convert Lead Logic
-            lead = Lead.query.get_or_404(id) # Fetch the lead or return 404
+            lead = Lead.query.get_or_404(id)
+            
+            # Check if lead is already converted
+            if lead.is_converted:
+                return {'message': 'Lead has already been converted as a customer'}, HTTPStatus.BAD_REQUEST
+
             json_data = request.get_json()
+            print(f"Received JSON data: {json_data}")  # Debug print
 
             # Ensure JSON data is provided
             if not json_data:
                 return {'message': 'No input data provided'}, HTTPStatus.BAD_REQUEST
+
+            # Validate customer data
+            errors = self.customer_schema.validate(json_data)
+            if errors:
+                print(f"Validation errors: {errors}")  # Debug print
+                return {
+                    'message': 'Validation error',
+                    'errors': errors
+                }, HTTPStatus.BAD_REQUEST  # Changed from 403 to 400
 
             try:
                 # Create a new customer instance and add to the session
@@ -94,8 +109,8 @@ class LeadResource(Resource):
                 
                 # Create a new contact instance and add to the session
                 contact = Contact(
-                    customer_uid= customer.customer_uid,
-                    lead_id= lead.lead_id
+                    customer_uid=customer.customer_uid,
+                    lead_id=lead.lead_id
                 )
                 db.session.add(contact)
 
@@ -106,17 +121,15 @@ class LeadResource(Resource):
                     'message': 'Lead successfully converted to customer',
                     'customer': self.customer_schema.dump(customer),
                     'contact': self.contact_schema.dump(contact)
-                    }, HTTPStatus.OK
+                }, HTTPStatus.OK
             
             except Exception as e:
                 db.session.rollback()
-                return {'message': 'Error converting lead to customer', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
-
-        # If the lead is already converted
-        return {'message': 'Lead has already been converted as a customer'}, HTTPStatus.BAD_REQUEST
-
-
-
+                print(f"Database error: {str(e)}")  # Debug print
+                return {
+                    'message': 'Error converting lead to customer',
+                    'error': str(e)
+                }, HTTPStatus.INTERNAL_SERVER_ERROR
     def put(self, id):
         """
         PUT /api/leads/<id>
