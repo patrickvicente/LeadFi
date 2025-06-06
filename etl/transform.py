@@ -17,20 +17,23 @@ def clean_leads(df):
     if 'upload_status' in df.columns:
         df = df.drop('upload_status', axis=1)
 
+    # Set is_converted to False if it's null, empty, or "FALSE"
+    df['is_converted'] = df['is_converted'].fillna(False)
+    df['is_converted'] = df['is_converted'].replace('', False)
+    df['is_converted'] = df['is_converted'].replace('FALSE', False)
+    df['is_converted'] = df['is_converted'].replace('false', False)
+    df['is_converted'] = df['is_converted'].astype(bool)
+    
     # Remove rows where required fields are missing
     required_fields = ['full_name', 'company_name', 'source', 'bd_in_charge']
     df = df.dropna(subset=required_fields)
 
-    # Set is_converted to False if it's null or empty
-    df['is_converted'] = df['is_converted'].fillna(False)
-    df['is_converted'] = df['is_converted'].replace('', False)
-    df['is_converted'] = df['is_converted'].astype(bool)
-    
     # Remove rows where both email and telegram are missing
     df = df[df['email'].notna() | df['telegram'].notna()]
 
     # Replace blank strings or whitespace-only strings with NaN (null)
-    df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
+    df = df.replace(r'^\s*$', np.nan, regex=True)
+    df = df.infer_objects(copy=False)
 
     # Clean and normalize values
     string_columns = [
