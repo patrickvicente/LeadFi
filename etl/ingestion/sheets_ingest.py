@@ -25,14 +25,21 @@ def ingest_leads():
             return
 
         # 2. Transform
-        leads_df, original_indices = clean_leads(df)
+        leads_df, original_indices, duplicate_indices = clean_leads(df)
         print(f"Extracted {len(leads_df)} rows from Leads sheet.")
+
+        sheet = get_sheet("Leads")
+
+        # Mark duplicates as ERROR
+        if duplicate_indices:
+            print(f"Marking {len(duplicate_indices)} as duplicate rows")
+            update_sheet_status(sheet, duplicate_indices, 'DUPLICATES')
+
         if leads_df.empty:
             print(f"No new data to load")
             return
         
         # 3. Load and start a transaction
-        sheet = get_sheet("Leads")
         successful_indices = []
         failed_indices = []
         

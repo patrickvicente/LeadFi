@@ -11,6 +11,51 @@ def clean_leads(df):
 
     # normalize column names
     df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
+
+    # Check for duplicates within the sheet
+    errors = []
+    duplicate_indices = set()
+    
+    # Check for duplicate emails (excluding empty values)
+    email_mask = df['email'].notna() & (df['email'] != '')
+    if email_mask.any():
+        email_duplicates = df[email_mask].duplicated(subset=['email'], keep='first')
+        if email_duplicates.any():
+            duplicate_emails = df[email_mask][email_duplicates]['email'].unique()
+            errors.append(f"Duplicate emails found in sheet: {', '.join(duplicate_emails)}")
+            # Add indices of duplicate rows to set
+            duplicate_indices.update(df[email_mask][email_duplicates].index)
+    
+    # Check for duplicate telegram handles (excluding empty values)
+    telegram_mask = df['telegram'].notna() & (df['telegram'] != '')
+    if telegram_mask.any():
+        telegram_duplicates = df[telegram_mask].duplicated(subset=['telegram'], keep='first')
+        if telegram_duplicates.any():
+            duplicate_telegrams = df[telegram_mask][telegram_duplicates]['telegram'].unique()
+            errors.append(f"Duplicate telegram handles found in sheet: {', '.join(duplicate_telegrams)}")
+            # Add indices of duplicate rows to set
+            duplicate_indices.update(df[telegram_mask][telegram_duplicates].index)
+    
+    # Check for duplicate customer_uid
+    uid_mask = df['customer_uid'].notna()
+    if uid_mask.any():
+        uid_duplicates = df[uid_mask].duplicated(subset=['customer_uid'], keep='first')
+        if uid_duplicates.any():
+            duplicate_uids = df[uid_mask][uid_duplicates]['customer_uid'].unique()
+            errors.append(f"Duplicate customer_uid found in sheet: {', '.join(map(str, duplicate_uids))}")
+            # Add indices of duplicate rows to set
+            duplicate_indices.update(df[uid_mask][uid_duplicates].index)
+    
+    if errors:
+        print("\nValidation errors found in sheet:")
+        for error in errors:
+            print(f"- {error}")
+        # Filter out duplicate rows but keep valid ones
+        df = df[~df.index.isin(duplicate_indices)]
+        if df.empty:
+            return pd.DataFrame(), original_indices
+
+    # Remove duplicates
     df = df.drop_duplicates()
 
     # Set is_converted to False if it's null, empty, or "FALSE"
@@ -77,7 +122,7 @@ def clean_leads(df):
     df = df.drop(columns=[col for col in columns_to_drop if col in df.columns])
 
     # Return both the cleaned data and the original indices
-    return df, original_indices
+    return df, original_indices, list(duplicate_indices)
 
 def clean_apollo_csv(df):
 
