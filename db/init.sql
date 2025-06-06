@@ -28,7 +28,7 @@ CREATE TABLE "lead" (
 
 -- Customer Table
 CREATE TABLE "customer" (
-  "customer_uid" char(8) PRIMARY KEY NOT NULL, -- UID from internal system
+  "customer_uid" INTEGER PRIMARY KEY NOT NULL, -- Changed from char(8) to INTEGER
   "type" varchar(50),
   "name" varchar(120) NOT NULL,
   "is_closed" char(1) DEFAULT 'N' NOT NULL, -- 'N' for non closed and 'Y' for closed
@@ -40,7 +40,7 @@ CREATE TABLE "customer" (
 -- Contact Table
 CREATE TABLE "contact" (
   "contact_id" serial PRIMARY KEY NOT NULL, -- Unique ID for the contact
-  "customer_uid" char(8) NOT NULL, -- References customer
+  "customer_uid" INTEGER NOT NULL, -- Changed from char(8) to INTEGER
   "lead_id" int NOT NULL, -- References lead
   "is_primary_contact" BOOLEAN DEFAULT TRUE,
   "date_added" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, -- When the contact was added
@@ -50,7 +50,7 @@ CREATE TABLE "contact" (
 
 -- Daily Trading Volume Table
 CREATE TABLE "daily_trading_volume" (
-  "customer_uid" char(8) NOT NULL,
+  "customer_uid" INTEGER NOT NULL, -- Changed from char(8) to INTEGER
   "date" date NOT NULL,
   "spot_maker_trading_volume" numeric(18,2),
   "spot_taker_trading_volume" numeric(18,2),
@@ -67,7 +67,7 @@ CREATE TABLE "daily_trading_volume" (
 
 -- VIP History Table
 CREATE TABLE "vip_history" (
-  "customer_uid" char(8) NOT NULL,
+  "customer_uid" INTEGER NOT NULL, -- Changed from char(8) to INTEGER
   "date" date NOT NULL,
   "vip_level" char(2) NOT NULL DEFAULT '0',
   "spot_mm_level" char(1) DEFAULT '0',
