@@ -19,8 +19,18 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = get_db_url()
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
-    # Initialize extensions
-    CORS(app)
+    # Initialize extensions with specific CORS configuration
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": ["http://localhost:3000"],  # Your React app's URL
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True,
+            "expose_headers": ["Content-Type", "Authorization"],
+            "max_age": 3600
+        }
+    })
+    
     db.init_app(app)
     api = Api(app)
 
@@ -36,6 +46,12 @@ def create_app():
 
     @app.after_request
     def log_response_info(response):
+        # Add CORS headers to response
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        
         print("\nOutgoing response:")
         print(f"Status: {response.status_code}")
         print(f"Headers: {dict(response.headers)}")

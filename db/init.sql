@@ -79,10 +79,11 @@ CREATE TABLE "vip_history" (
 CREATE TABLE "activity" (
   "activity_id" serial PRIMARY KEY NOT NULL,
   "lead_id" int,
-  "activity_type" varchar(50) NOT NULL,
+  "activity_type" varchar(50) NOT NULL, -- LinkedIn connection request, linkedin_intro, telegram_intro, follow_up, email, meeting, 
   "description" text,
   "date_created" timestamp NOT NULL,
   "bd" varchar(20)
+  -- "status" VARCHAR(50) DEFAULT 'pending' -- 'completed', 'failed', 'cancelled'
 );
 
 COMMENT ON TABLE "daily_trading_volume" IS 'Composite PK ensures unique daily trading record per customer';

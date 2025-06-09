@@ -21,4 +21,4 @@ const Activity = () => {
     );
   };
 
-export default Leads;
+export default Activity;
