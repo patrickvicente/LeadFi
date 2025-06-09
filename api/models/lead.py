@@ -19,7 +19,7 @@ class Lead(db.Model):
     bd_in_charge = db.Column(db.String(20), nullable=False)
     background = db.Column(db.Text)
     is_converted = db.Column(db.Boolean, default=False)
-    type = db.Column(db.String(255), nullable=False)
+    type = db.Column(db.String(50), nullable=False)
     contacts = db.relationship(
         'Contact',
         backref=db.backref('lead', lazy=True),
