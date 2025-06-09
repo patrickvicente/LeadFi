@@ -3,10 +3,12 @@ import React, { useState, useEffect } from 'react';
 import Filter from '../components/common/Filter';
 import LeadList from '../components/leads/LeadList';
 import LeadForm from '../components/leads/LeadForm';
+import LeadDetailsModal from '../components/leads/LeadDetailsModal';
 import { leadApi } from '../services/api';
 
 const Leads = () => {
   const [leads, setLeads] = useState([]);
+  const [selectedLeadDetails, setSelectedLeadDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -103,6 +105,16 @@ const Leads = () => {
     ]
   };
 
+  const handleViewLead = (lead) => {
+    setSelectedLeadDetails(lead);
+  };
+
+  const handleConvertToCustomer = (lead) => {
+    // Handle conversion to customer
+    // You might want to open a customer form here
+    console.log('Converting lead to customer:', lead);
+  };
+
   // Handle lead actions
   const handleAddLead = () => {
     setSelectedLead(null);
@@ -197,6 +209,7 @@ const Leads = () => {
             leads={leads}
             onEditLead={handleEditLead}
             onDeleteLead={handleDeleteLead}
+            onViewLead={handleViewLead}
           />
           
           {/* Pagination UI */}
@@ -243,6 +256,14 @@ const Leads = () => {
           lead={selectedLead}
           onClose={handleCloseForm}
           onSubmit={handleSubmitLead}
+        />
+      )}
+
+      {selectedLeadDetails && (
+        <LeadDetailsModal
+          lead={selectedLeadDetails}
+          onClose={() => setSelectedLeadDetails(null)}
+          onConvert={() => handleConvertToCustomer(selectedLeadDetails)}
         />
       )}
     </div>
