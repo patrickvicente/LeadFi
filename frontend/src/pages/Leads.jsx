@@ -148,11 +148,11 @@ const Leads = () => {
       } else {
         await leadApi.createLead(formData);
       }
-      fetchLeads(); // Refresh leads after submission
       handleCloseForm();
+      fetchLeads(); // Refresh leads after submission
     } catch (err) {
-      setError('Failed to save lead');
       console.error('Error saving lead:', err);
+      throw err; // Re-throw the error to be handled by the form
     }
   };
 

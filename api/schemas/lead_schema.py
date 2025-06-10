@@ -7,7 +7,9 @@ class LeadSchema(Schema):
     email = fields.Email(allow_none=True)
     telegram = fields.Str(allow_none=True)
     phone_number = fields.Str(allow_none=True)
-    source = fields.Str(required=True, validate=validate.OneOf(['gate', 'linkedin', 'hubspot', 'conference', 'referral']))
+    source = fields.Str(required=True, validate=validate.OneOf([
+    'company', 'apollo', 'linkedin', 'hubspot', 'event', 'research', 'referral'
+    ]))
     status = fields.Str(required=True, validate=validate.OneOf([
         '1. lead generated', '2. proposal', '3. negotiation', '4. registration', 
         '4. integration', '5. closed won', '6. lost'
