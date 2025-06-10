@@ -1,5 +1,6 @@
 import React from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { formatDate } from '../../utils/dateFormat';
 
 const LeadDetailsModal = ({ lead, onClose, onConvert }) => {
   if (!lead) return null;
@@ -35,7 +36,7 @@ const LeadDetailsModal = ({ lead, onClose, onConvert }) => {
                 <p><span className="font-medium">Stage:</span> {lead.stage}</p>
                 <p><span className="font-medium">Type:</span> {lead.type}</p>
                 <p><span className="font-medium">Source:</span> {lead.source}</p>
-                <p><span className="font-medium">Created:</span> {new Date(lead.created_at).toLocaleDateString()}</p>
+                <p><span className="font-medium">Created:</span> {formatDate(lead.date_created)}</p>
               </div>
             </div>
           </div>
