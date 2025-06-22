@@ -1,12 +1,13 @@
 -- Drop tables if they exist (for rebuilds)
-DROP TABLE IF EXISTS activity;
-DROP TABLE IF EXISTS daily_trading_volume;
-DROP TABLE IF EXISTS customer;
-DROP TABLE IF EXISTS lead;
-DROP TABLE IF EXISTS contact;
+DROP TABLE IF EXISTS activity CASCADE;
+DROP TABLE IF EXISTS daily_trading_volume CASCADE;
+DROP TABLE IF EXISTS vip_history CASCADE;
+DROP TABLE IF EXISTS contact CASCADE;
+DROP TABLE IF EXISTS customer CASCADE;
+DROP TABLE IF EXISTS lead CASCADE;
 
 -- Lead Table
-CREATE TABLE "lead" (
+CREATE TABLE IF NOT EXISTS "lead" (
   "lead_id" serial PRIMARY KEY NOT NULL,
   "full_name" varchar(50) NOT NULL,
   "title" varchar(50),
@@ -21,12 +22,12 @@ CREATE TABLE "lead" (
   "country" varchar(50),
   "bd_in_charge" varchar(20) NOT NULL,
   "background" text,
-  "is_converted" BOOLEAN DEFAULT FALSE. -- change to true once converted
+  "is_converted" BOOLEAN DEFAULT FALSE,
   "type" varchar(50) NOT NULL
 );
 
 -- Customer Table
-CREATE TABLE "customer" (
+CREATE TABLE IF NOT EXISTS "customer" (
   "customer_uid" INTEGER PRIMARY KEY NOT NULL, -- Changed from char(8) to INTEGER
   "type" varchar(50),
   "name" varchar(120) NOT NULL,
@@ -37,7 +38,7 @@ CREATE TABLE "customer" (
 );
 
 -- Contact Table
-CREATE TABLE "contact" (
+CREATE TABLE IF NOT EXISTS "contact" (
   "contact_id" serial PRIMARY KEY NOT NULL, -- Unique ID for the contact
   "customer_uid" INTEGER NOT NULL, -- Changed from char(8) to INTEGER
   "lead_id" int NOT NULL, -- References lead
@@ -48,7 +49,7 @@ CREATE TABLE "contact" (
 );
 
 -- Daily Trading Volume Table
-CREATE TABLE "daily_trading_volume" (
+CREATE TABLE IF NOT EXISTS "daily_trading_volume" (
   "customer_uid" INTEGER NOT NULL, -- Changed from char(8) to INTEGER
   "date" date NOT NULL,
   "spot_maker_trading_volume" numeric(18,2),
@@ -65,7 +66,7 @@ CREATE TABLE "daily_trading_volume" (
 );
 
 -- VIP History Table
-CREATE TABLE "vip_history" (
+CREATE TABLE IF NOT EXISTS "vip_history" (
   "customer_uid" INTEGER NOT NULL, -- Changed from char(8) to INTEGER
   "date" date NOT NULL,
   "vip_level" char(2) NOT NULL DEFAULT '0',
@@ -76,7 +77,7 @@ CREATE TABLE "vip_history" (
 );
 
 -- Activity table
-CREATE TABLE "activity" (
+CREATE TABLE IF NOT EXISTS "activity" (
   "activity_id" serial PRIMARY KEY NOT NULL,
   "lead_id" int,
   "activity_type" varchar(50) NOT NULL, -- LinkedIn connection request, linkedin_intro, telegram_intro, follow_up, email, meeting, 

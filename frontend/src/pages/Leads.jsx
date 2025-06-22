@@ -1,4 +1,3 @@
-// frontend/src/pages/Leads.jsx
 import React, { useState, useEffect } from 'react';
 import Filter from '../components/common/Filter';
 import LeadList from '../components/leads/LeadList';
@@ -155,20 +154,6 @@ const Leads = () => {
       throw err; // Re-throw the error to be handled by the form
     }
   };
-
-  // For now, just return all leads without filtering
-  const filteredLeads = leads;
-
-  /* 
-  // Filter implementation for future use
-  const filteredLeads = leads.filter(lead => {
-    if (filters.status !== 'all' && lead.status !== filters.status) return false;
-    if (filters.source !== 'all' && lead.source !== filters.source) return false;
-    if (filters.type !== 'all' && lead.type !== filters.type) return false;
-    if (filters.search && !lead.full_name.toLowerCase().includes(filters.search.toLowerCase())) return false;
-    return true;
-  });
-  */
 
   if (error) {
     return (

@@ -18,7 +18,7 @@ db = SQLAlchemy()
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
     "port": os.getenv("DB_PORT", "5432"),
-    "database": os.getenv("DB_NAME", "personal_crm"),
+    "database": os.getenv("DB_NAME", "leadfi_db"),
     "user": os.getenv("DB_USER", "patrickvicente"),     
     "password": os.getenv("DB_PASSWORD", "")  
 }

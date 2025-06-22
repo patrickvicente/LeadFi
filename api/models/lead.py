@@ -43,5 +43,6 @@ class Lead(db.Model):
             'country': self.country,
             'bd_in_charge': self.bd_in_charge,
             'background': self.background,
-            'is_converted': self.is_converted
+            'is_converted': self.is_converted,
+            'type': self.type
         }
