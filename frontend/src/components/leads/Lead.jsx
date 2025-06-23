@@ -7,13 +7,13 @@ import {
 } from '@heroicons/react/24/outline';
 
 const Lead = ({ lead, onEdit, onDelete, onView, onConvert }) => {
-  const {
-    full_name = 'No Name',
-    status = 'Unknown',
-    type = 'Unknown',
-    company_name = 'Unknown',
-    lead_id
-  } = lead || {};
+    const {
+        full_name = 'No Name',
+        status = 'Unknown',
+        type = 'Unknown',
+        company_name = 'Unknown',
+        lead_id
+      } = lead || {};
 
   const getStatusBadge = (status) => {
     const statusColors = {
@@ -34,8 +34,8 @@ const Lead = ({ lead, onEdit, onDelete, onView, onConvert }) => {
         {status}
       </span>
     );
-  };
-
+      };
+    
   const getTypeBadge = (type) => {
     if (!type) return 'N/A';
     
@@ -53,9 +53,9 @@ const Lead = ({ lead, onEdit, onDelete, onView, onConvert }) => {
         {type}
       </span>
     );
-  };
-
-  return (
+      };
+      
+      return (
     <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start">
         <div className="flex-1">
@@ -79,20 +79,20 @@ const Lead = ({ lead, onEdit, onDelete, onView, onConvert }) => {
         </div>
         
         <div className="flex gap-2">
-          <button
+              <button
             onClick={() => onView(lead)}
             className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
             title="View Lead"
-          >
+              >
             <EyeIcon className="h-5 w-5" />
-          </button>
-          <button
+              </button>
+              <button
             onClick={() => onEdit(lead)}
             className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50"
-            title="Edit Lead"
-          >
-            <PencilIcon className="h-5 w-5" />
-          </button>
+                title="Edit Lead"
+              >
+                <PencilIcon className="h-5 w-5" />
+              </button>
           {onConvert && (
             <button
               onClick={() => onConvert(lead)}
@@ -102,17 +102,17 @@ const Lead = ({ lead, onEdit, onDelete, onView, onConvert }) => {
               <UserPlusIcon className="h-5 w-5" />
             </button>
           )}
-          <button
+              <button
             onClick={() => onDelete(lead_id)}
             className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
-            title="Delete Lead"
-          >
-            <TrashIcon className="h-5 w-5" />
-          </button>
-        </div>
+                title="Delete Lead"
+              >
+                <TrashIcon className="h-5 w-5" />
+              </button>
+            </div>
       </div>
     </div>
-  );
-};
+      );
+    };
 
 export default Lead;
