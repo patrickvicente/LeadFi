@@ -1,15 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  XMarkIcon, 
-  PencilIcon, 
-  TrashIcon, 
-  UserPlusIcon,
-  CheckIcon,
-  XCircleIcon
-} from '@heroicons/react/24/outline';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import { formatDate } from '../../utils/dateFormat';
 import { optionHelpers } from '../../config/options';
 import { validateForm } from '../../utils/formValidation';
+import ActionButtons from '../common/ActionButtons';
+import IconButton from '../common/IconButton';
 
 const LeadDetailsModal = ({ lead, onClose, onEdit, onDelete, onConvert, onSubmit }) => {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -97,57 +92,38 @@ const LeadDetailsModal = ({ lead, onClose, onEdit, onDelete, onConvert, onSubmit
               {isEditMode ? 'Edit Lead' : 'Lead Details'}
             </h2>
             <div className="flex items-center gap-2">
-              {/* Action Icons */}
               {!isEditMode ? (
-                <>
-                  <button
-                    onClick={handleEditClick}
-                    className="text-highlight3 hover:text-highlight3/80 p-2 rounded hover:bg-gray-700 transition-colors"
-                    title="Edit Lead"
-                  >
-                    <PencilIcon className="h-5 w-5" />
-                  </button>
-                  {onConvert && (
-                    <button
-                      onClick={() => onConvert(lead)}
-                      className="text-highlight5 hover:text-highlight5/80 p-2 rounded hover:bg-gray-700 transition-colors"
-                      title="Convert to Customer"
-                    >
-                      <UserPlusIcon className="h-5 w-5" />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => onDelete(lead.lead_id)}
-                    className="text-highlight2 hover:text-highlight2/80 p-2 rounded hover:bg-gray-700 transition-colors"
-                    title="Delete Lead"
-                  >
-                    <TrashIcon className="h-5 w-5" />
-                  </button>
-                </>
+                <ActionButtons
+                  actions={{
+                    onEdit: handleEditClick,
+                    onDelete: () => onDelete(lead.lead_id),
+                    onConvert: () => onConvert(lead),
+                    showEdit: true,
+                    showDelete: true,
+                    showConvert: !!onConvert,
+                    editTitle: "Edit Lead",
+                    deleteTitle: "Delete Lead",
+                    convertTitle: "Convert to Customer"
+                  }}
+                />
               ) : (
-                <>
-                  <button
-                    onClick={handleSaveEdit}
-                    className="text-highlight5 hover:text-highlight5/80 p-2 rounded hover:bg-gray-700 transition-colors"
-                    title="Save Changes"
-                  >
-                    <CheckIcon className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    className="text-highlight2 hover:text-highlight2/80 p-2 rounded hover:bg-gray-700 transition-colors"
-                    title="Cancel Edit"
-                  >
-                    <XCircleIcon className="h-5 w-5" />
-                  </button>
-                </>
+                <ActionButtons
+                  actions={{
+                    onSave: handleSaveEdit,
+                    onCancel: handleCancelEdit,
+                    showSave: true,
+                    showCancel: true,
+                    saveTitle: "Save Changes",
+                    cancelTitle: "Cancel Edit"
+                  }}
+                />
               )}
-              <button 
-                onClick={onClose} 
-                className="text-text hover:text-gray-300 p-2 rounded hover:bg-gray-700 transition-colors"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
+              <IconButton
+                icon={XMarkIcon}
+                onClick={onClose}
+                variant="default"
+                title="Close"
+              />
             </div>
           </div>
 
