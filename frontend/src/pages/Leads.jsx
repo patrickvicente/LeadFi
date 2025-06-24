@@ -155,6 +155,16 @@ const Leads = () => {
     }
   };
 
+  const handleUpdateLead = async (formData) => {
+    try {
+      await leadApi.updateLead(selectedLeadDetails.lead_id, formData);
+      fetchLeads(); // Refresh leads after submission
+    } catch (err) {
+      console.error('Error updating lead:', err);
+      throw err; // Re-throw the error to be handled by the form
+    }
+  };
+
   if (error) {
     return (
       <div className="p-6">
@@ -192,21 +202,19 @@ const Leads = () => {
         <>
           <LeadList 
             leads={leads}
-            onEditLead={handleEditLead}
-            onDeleteLead={handleDeleteLead}
             onViewLead={handleViewLead}
           />
           
           {/* Pagination UI */}
           <div className="mt-4 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-400">
               Showing {leads.length} of {pagination.totalItems} leads
             </div>
             <div className="flex items-center space-x-2">
               <select
                 value={pagination.perPage}
                 onChange={(e) => handlePerPageChange(Number(e.target.value))}
-                className="border rounded px-2 py-1"
+                className="border border-gray-600 bg-background text-text rounded px-2 py-1"
               >
                 <option value={10}>10 per page</option>
                 <option value={20}>20 per page</option>
@@ -216,17 +224,17 @@ const Leads = () => {
                 <button
                   onClick={() => handlePageChange(pagination.currentPage - 1)}
                   disabled={pagination.currentPage === 1}
-                  className="px-3 py-1 border rounded disabled:opacity-50"
+                  className="px-3 py-1 border border-gray-600 bg-background text-text rounded disabled:opacity-50 hover:bg-gray-700"
                 >
                   Previous
                 </button>
-                <span className="px-3 py-1">
+                <span className="px-3 py-1 text-text">
                   Page {pagination.currentPage} of {pagination.totalPages}
                 </span>
                 <button
                   onClick={() => handlePageChange(pagination.currentPage + 1)}
                   disabled={pagination.currentPage === pagination.totalPages}
-                  className="px-3 py-1 border rounded disabled:opacity-50"
+                  className="px-3 py-1 border border-gray-600 bg-background text-text rounded disabled:opacity-50 hover:bg-gray-700"
                 >
                   Next
                 </button>
@@ -248,7 +256,10 @@ const Leads = () => {
         <LeadDetailsModal
           lead={selectedLeadDetails}
           onClose={() => setSelectedLeadDetails(null)}
-          onConvert={() => handleConvertToCustomer(selectedLeadDetails)}
+          onEdit={handleEditLead}
+          onDelete={handleDeleteLead}
+          onConvert={handleConvertToCustomer}
+          onSubmit={handleUpdateLead}
         />
       )}
     </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import Lead from './Lead';
 
-const LeadList = ({ leads = [], onEditLead, onDeleteLead, onViewLead }) => {
+const LeadList = ({ leads = [], onViewLead }) => {
     //  check for lead array
     if (!Array.isArray(leads)) {
         console.error('Leads prop must be an array');
@@ -14,8 +14,6 @@ const LeadList = ({ leads = [], onEditLead, onDeleteLead, onViewLead }) => {
         <Lead
           key={lead.lead_id}
           lead={lead}
-          onEdit={onEditLead}
-          onDelete={onDeleteLead}
           onView={onViewLead}
         />
       ))}
