@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { optionHelpers } from '../../config/options';
 import { validateForm } from '../../utils/formValidation';
+import FormSelect from '../common/FormSelect';
 
 const LeadForm = ({ lead, onClose, onSubmit }) => {
   const isEdit = lead !== null;
@@ -227,65 +228,41 @@ const LeadForm = ({ lead, onClose, onSubmit }) => {
 
               {/* Lead Status and Source */}
               <div>
-                <label className="block text-sm font-medium text-text">Status *</label>
-                <select
+                <FormSelect
                   name="status"
+                  label="Status"
                   value={formData.status}
                   onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
-                    errors.status ? 'border-highlight2' : ''
-                  }`}
+                  type="lead"
+                  error={errors.status}
                   required
-                >
-                  {optionHelpers.getOptions('status', 'lead').map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {renderError('status')}
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text">Source *</label>
-                <select
+                <FormSelect
                   name="source"
+                  label="Source"
                   value={formData.source}
                   onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
-                    errors.source ? 'border-highlight2' : ''
-                  }`}
+                  type="lead"
+                  error={errors.source}
                   required
-                >
-                  <option value="">Select Source</option>
-                  {optionHelpers.getOptions('source', 'lead').map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {renderError('source')}
+                  placeholder="Select Source"
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text">Type *</label>
-                <select
+                <FormSelect
                   name="type"
+                  label="Type"
                   value={formData.type}
                   onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
-                    errors.type ? 'border-highlight2' : ''
-                  }`}
+                  type="lead"
+                  error={errors.type}
                   required
-                >
-                  <option value="">Select Type</option>
-                  {optionHelpers.getOptions('type', 'lead').map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {renderError('type')}
+                  placeholder="Select Type"
+                />
               </div>
 
               <div>

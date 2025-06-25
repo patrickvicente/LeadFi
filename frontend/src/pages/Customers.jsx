@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Filter from "../components/common/Filter"; 
 import CustomerList from "../components/customers/CustomerList";
 import CustomerForm from "../components/customers/CustomerForm";
 import CustomerDetailsModal from "../components/customers/CustomerDetailsModal";
 import { customerApi } from "../services/api";
+import { useServerSorting } from "../utils/useServerSorting";
 
 const Customers = () => {
+    const navigate = useNavigate();
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -26,6 +29,18 @@ const Customers = () => {
         totalItems: 0,
     });
 
+    // Server-side sorting hook
+    const {
+        sortField,
+        sortDirection,
+        handleSort,
+        getSortParams
+    } = useServerSorting(() => {
+        // Reset to page 1 when sorting changes
+        setPagination(prev => ({ ...prev, currentPage: 1 }));
+        fetchCustomers();
+    });
+
     // Fetch customers with pagination and filters
     const fetchCustomers = async () => {
       try {
@@ -34,7 +49,8 @@ const Customers = () => {
 
         const params = {
           page: pagination.currentPage,
-          per_page: pagination.perPage
+          per_page: pagination.perPage,
+          ...getSortParams()
         }
 
         // Add filters
@@ -92,6 +108,20 @@ const Customers = () => {
         currentPage: 1, // Reset to first page
         perPage: newPerPage
       }));
+    };
+
+    // Create sort handlers for specific fields
+    const sortHandlers = {
+      lead_status: {
+        sortField,
+        sortDirection,
+        onSort: handleSort
+      },
+      date_converted: {
+        sortField,
+        sortDirection,
+        onSort: handleSort
+      }
     };
 
     // Filter configuration
@@ -199,6 +229,11 @@ const Customers = () => {
       setIsFormOpen(false);
     };
 
+    const handleViewLead = (lead) => {
+      // Navigate to leads page with lead_id as URL parameter
+      navigate(`/leads?lead_id=${lead.lead_id}`);
+    };
+
     if (error) {
       return (
         <div className="p-6 bg-background min-h-screen">
@@ -238,6 +273,7 @@ const Customers = () => {
             <CustomerList 
               customers={customers}
               onViewCustomer={handleViewCustomer}
+              sortHandlers={sortHandlers}
             />
             
             {/* Pagination UI */}
@@ -287,6 +323,7 @@ const Customers = () => {
             onClose={handleCloseModal}
             onSubmit={handleEditCustomer}
             onDelete={handleDeleteCustomer}
+            onViewLead={handleViewLead}
           />
         )}
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { optionHelpers } from '../../config/options';
 import { validateForm } from '../../utils/formValidation';
+import FormSelect from '../common/FormSelect';
 
 const CustomerForm = ({ onClose, onSubmit, customer = null }) => {
   const isEdit = customer !== null;
@@ -178,24 +179,16 @@ const CustomerForm = ({ onClose, onSubmit, customer = null }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text">Type *</label>
-                <select
+                <FormSelect
                   name="type"
+                  label="Type"
                   value={formData.type}
                   onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
-                    errors.type ? 'border-highlight2' : ''
-                  }`}
+                  type="customer"
+                  error={errors.type}
                   required
-                >
-                  <option value="">Select Type</option>
-                  {optionHelpers.getOptions('type', 'customer').map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {renderError('type')}
+                  placeholder="Select Type"
+                />
               </div>
 
               <div>

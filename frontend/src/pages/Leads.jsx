@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Filter from '../components/common/Filter';
 import LeadList from '../components/leads/LeadList';
 import LeadForm from '../components/leads/LeadForm';
@@ -7,9 +8,11 @@ import { leadApi } from '../services/api';
 import { useServerSorting } from '../utils/useServerSorting';
 
 const Leads = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [leads, setLeads] = useState([]);
   const [selectedLeadDetails, setSelectedLeadDetails] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [leadDetailsLoading, setLeadDetailsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
@@ -34,6 +37,39 @@ const Leads = () => {
     // Trigger data fetch with new sort parameters
     fetchLeads(1, pagination.perPage, sortField, sortDirection);
   });
+
+  // Check for lead_id in URL parameters and fetch that lead
+  useEffect(() => {
+    const leadId = searchParams.get('lead_id');
+    if (leadId) {
+      fetchLeadDetails(leadId);
+    }
+  }, [searchParams]);
+
+  // Fetch specific lead details by ID
+  const fetchLeadDetails = async (leadId) => {
+    try {
+      setLeadDetailsLoading(true);
+      const response = await leadApi.getLead(leadId);
+      if (response && response.lead) {
+        setSelectedLeadDetails(response.lead);
+        // Remove the lead_id parameter from URL after opening the modal
+        // This prevents the modal from reopening if the user navigates back
+      } else {
+        console.error('Lead not found:', leadId);
+        // Remove invalid lead_id from URL
+        searchParams.delete('lead_id');
+        setSearchParams(searchParams);
+      }
+    } catch (err) {
+      console.error('Error fetching lead details:', err);
+      // Remove invalid lead_id from URL
+      searchParams.delete('lead_id');
+      setSearchParams(searchParams);
+    } finally {
+      setLeadDetailsLoading(false);
+    }
+  };
 
   // Fetch leads with pagination, filters, and sorting
   const fetchLeads = async (page = pagination.currentPage, perPage = pagination.perPage, sortBy = sortHandlers.sortField, sortOrder = sortHandlers.sortDirection) => {
@@ -123,6 +159,15 @@ const Leads = () => {
 
   const handleViewLead = (lead) => {
     setSelectedLeadDetails(lead);
+    // Add lead_id to URL for direct linking
+    setSearchParams({ lead_id: lead.lead_id });
+  };
+
+  const handleCloseLeadDetails = () => {
+    setSelectedLeadDetails(null);
+    // Remove lead_id from URL when closing
+    searchParams.delete('lead_id');
+    setSearchParams(searchParams);
   };
 
   const handleConvertToCustomer = (lead) => {
@@ -270,10 +315,11 @@ const Leads = () => {
         />
       )}
 
-      {selectedLeadDetails && (
+      {(selectedLeadDetails || leadDetailsLoading) && (
         <LeadDetailsModal
           lead={selectedLeadDetails}
-          onClose={() => setSelectedLeadDetails(null)}
+          loading={leadDetailsLoading}
+          onClose={handleCloseLeadDetails}
           onEdit={handleEditLead}
           onDelete={handleDeleteLead}
           onSubmit={handleUpdateLead}

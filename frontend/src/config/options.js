@@ -46,15 +46,33 @@ export const leadOptions = {
     { value: 'venture capital', label: 'Venture Capital' },
     { value: 'prop trader', label: 'Prop Trader' },
     { value: 'family office', label: 'Family Office' },
-    { value: 'hft', label: 'HFT' }
+    { value: 'hft', label: 'HFT' },
+    { value: 'other', label: 'Other' }
   ]
 };
 
 // Customer related options
 export const customerOptions = {
   type: [
-    // Add customer types
+    { value: 'liquidity provider', label: 'Liquidity Provider' },
+    { value: 'vip', label: 'VIP' },
+    { value: 'institution', label: 'Institution' },
+    { value: 'api', label: 'API' },
+    { value: 'broker', label: 'Broker' },
+    { value: 'otc', label: 'OTC' },
+    { value: 'project mm', label: 'Project MM' },
+    { value: 'asset manager', label: 'Asset Manager' },
+    { value: 'venture capital', label: 'Venture Capital' },
+    { value: 'prop trader', label: 'Prop Trader' },
+    { value: 'family office', label: 'Family Office' },
+    { value: 'hft', label: 'HFT' },
+    { value: 'other', label: 'Other' }
   ],
+  status: [
+    { value: 'active', label: 'Active' },
+    { value: 'inactive', label: 'Inactive' },
+    { value: 'closed', label: 'Closed' }
+  ]
   // Add more customer-specific options
 };
 

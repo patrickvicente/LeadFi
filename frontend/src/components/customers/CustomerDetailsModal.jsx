@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { formatDate, formatDateOnly } from '../../utils/dateFormat';
 import { optionHelpers } from '../../config/options';
 import { validateForm } from '../../utils/formValidation';
 import ActionButtons from '../common/ActionButtons';
 import IconButton from '../common/IconButton';
 
-const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDelete, onSubmit }) => {
+const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDelete, onSubmit, onViewLead }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
@@ -111,7 +111,13 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
     );
   };
 
-  if (!customer) return null;
+  const handleViewLead = (lead) => {
+    if (onViewLead) {
+      onViewLead(lead);
+    }
+  };
+
+  if (!customer && !loading) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -318,8 +324,6 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
                       <div className="space-y-2 text-text">
                         <p><span className="font-medium">Name:</span> {customer.name}</p>
                         <p><span className="font-medium">Customer ID:</span> {customer.customer_uid || customer.customer_id}</p>
-                        <p><span className="font-medium">Email:</span> {customer.email || 'N/A'}</p>
-                        <p><span className="font-medium">Phone:</span> {customer.phone_number || 'N/A'}</p>
                         <p><span className="font-medium">Country:</span> {customer.country || 'N/A'}</p>
                       </div>
                     </div>
@@ -327,7 +331,16 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
                       <h3 className="text-lg font-semibold mb-4 text-text">Customer Details</h3>
                       <div className="space-y-2 text-text">
                         <p><span className="font-medium">Type:</span> {customer.type}</p>
-                        <p><span className="font-medium">Status:</span> {customer.is_closed ? 'Closed' : 'Active'}</p>
+                        <p>
+                          <span className="font-medium">Status:</span>{' '}
+                          {customer.lead_status ? (
+                            <span className="inline-block ml-1">
+                              {getStatusBadge(customer.lead_status)}
+                            </span>
+                          ) : (
+                            'N/A'
+                          )}
+                        </p>
                         <p><span className="font-medium">BD in Charge:</span> {customer.bd_in_charge || 'Unassigned'}</p>
                         <p><span className="font-medium">Date Converted:</span> {customer.date_converted ? formatDateOnly(customer.date_converted) : 'Unknown'}</p>
                         {customer.date_closed && (
@@ -347,6 +360,21 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
                     </div>
                   )}
 
+                  {/* Background Information from Related Leads */}
+                  {customer.related_leads && customer.related_leads.length > 0 && customer.related_leads[0].background && (
+                    <div className="mb-8">
+                      <h3 className="text-lg font-semibold mb-4 text-text">Background Information</h3>
+                      <div className="bg-gray-800 rounded-lg p-4">
+                        <p className="text-text whitespace-pre-wrap">{customer.related_leads[0].background}</p>
+                        {customer.related_leads.length > 1 && (
+                          <p className="text-gray-400 text-sm mt-2 italic">
+                            Background from primary lead. Additional leads may have different background information.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Related Leads */}
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold mb-4 text-text">Related Leads</h3>
@@ -356,22 +384,22 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
                           <thead className="bg-gray-900">
                             <tr>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                                Name
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                                Company
+                                Full Name
                               </th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                                 Status
                               </th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                                Type
+                                Email
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                Telegram
                               </th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                                 Source
                               </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                                Created
+                              <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider w-20">
+                                Action
                               </th>
                             </tr>
                           </thead>
@@ -389,20 +417,26 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
                                     {lead.title || ''}
                                   </div>
                                 </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-text">
-                                  {lead.company_name || 'N/A'}
-                                </td>
                                 <td className="px-4 py-4 whitespace-nowrap">
                                   {getStatusBadge(lead.status)}
                                 </td>
                                 <td className="px-4 py-4 whitespace-nowrap text-sm text-text">
-                                  {lead.type || 'N/A'}
+                                  {lead.email || 'N/A'}
+                                </td>
+                                <td className="px-4 py-4 whitespace-nowrap text-sm text-text">
+                                  {lead.telegram || 'N/A'}
                                 </td>
                                 <td className="px-4 py-4 whitespace-nowrap text-sm text-text">
                                   {lead.source || 'N/A'}
                                 </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-400">
-                                  {lead.date_created ? formatDateOnly(lead.date_created) : 'N/A'}
+                                <td className="px-4 py-4 whitespace-nowrap text-center">
+                                  <IconButton
+                                    icon={EyeIcon}
+                                    onClick={() => handleViewLead(lead)}
+                                    variant="view"
+                                    size="sm"
+                                    title="View Lead Details"
+                                  />
                                 </td>
                               </tr>
                             ))}

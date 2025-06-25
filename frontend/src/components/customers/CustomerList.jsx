@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatDateOnly } from '../../utils/dateFormat';
 
-const CustomerList = ({ customers = [], onViewCustomer }) => {
+const CustomerList = ({ customers = [], onViewCustomer, sortHandlers = {} }) => {
     //  check for customer array
     if (!Array.isArray(customers)) {
         console.error('Customers prop must be an array');
@@ -56,6 +56,26 @@ const CustomerList = ({ customers = [], onViewCustomer }) => {
     );
   };
 
+  const getSortIcon = (field) => {
+    if (!sortHandlers[field]) return null;
+    
+    const { sortField, sortDirection } = sortHandlers[field];
+    
+    if (sortField !== field) {
+      return <span className="ml-1 text-gray-500">↑↓</span>;
+    }
+    
+    return sortDirection === 'asc' 
+      ? <span className="ml-1 text-highlight1">↑</span>
+      : <span className="ml-1 text-highlight1">↓</span>;
+  };
+
+  const handleSort = (field) => {
+    if (sortHandlers[field] && sortHandlers[field].onSort) {
+      sortHandlers[field].onSort(field);
+    }
+  };
+
   if (customers.length === 0) {
     return (
       <div className="bg-background border border-gray-700 rounded-lg p-8 text-center">
@@ -82,17 +102,26 @@ const CustomerList = ({ customers = [], onViewCustomer }) => {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[100px]">
                 Type
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px]">
+              <th 
+                className={`px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px] ${
+                  sortHandlers.lead_status ? 'cursor-pointer hover:bg-gray-700' : ''
+                }`}
+                onClick={() => handleSort('lead_status')}
+              >
                 Lead Status
+                {getSortIcon('lead_status')}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[140px]">
                 BD in Charge
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px]">
+              <th 
+                className={`px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px] ${
+                  sortHandlers.date_converted ? 'cursor-pointer hover:bg-gray-700' : ''
+                }`}
+                onClick={() => handleSort('date_converted')}
+              >
                 Date Converted
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[100px]">
-                Closed
+                {getSortIcon('date_converted')}
               </th>
             </tr>
           </thead>
@@ -137,11 +166,6 @@ const CustomerList = ({ customers = [], onViewCustomer }) => {
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-400 min-w-[120px]">
                   <div className="truncate" title={customer.date_converted ? formatDateOnly(customer.date_converted) : 'Unknown'}>
                     {customer.date_converted ? formatDateOnly(customer.date_converted) : 'Unknown'}
-                  </div>
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-400 min-w-[100px]">
-                  <div className="truncate" title={customer.date_closed ? formatDateOnly(customer.date_closed) : 'N/A'}>
-                    {customer.date_closed ? formatDateOnly(customer.date_closed) : 'N/A'}
                   </div>
                 </td>
               </tr>
