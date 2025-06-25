@@ -7,11 +7,10 @@ import { customerApi } from "../services/api";
 
 const Customers = () => {
     const [customers, setCustomers] = useState([]);
-    const [selectedCustomerDetails, setSelectedCustomerDetails] = useState(null);
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [filters, setFilters] = useState({
         search: "",
         status: "all",
@@ -40,6 +39,7 @@ const Customers = () => {
         // Add filters
         if (filters.status !== 'all') params.status = filters.status;
         if (filters.source !== 'all') params.source = filters.source;
+        if (filters.search) params.search = filters.search;
 
         console.log('Fetching customers with params:', params);
 
@@ -74,7 +74,7 @@ const Customers = () => {
     // Fetch when pagination or filters change
     useEffect(() => {
       fetchCustomers();
-    }, [pagination.currentPage, pagination.perPage, filters.status, filters.source]);
+    }, [pagination.currentPage, pagination.perPage, filters.status, filters.source, filters.search]);
 
     // Handle page change
     const handlePageChange = (newPage) => {
@@ -104,35 +104,99 @@ const Customers = () => {
     };
 
     const handleViewCustomer = (customer) => {
-      setSelectedCustomerDetails(customer);
+      setSelectedCustomer(customer);
     };
 
     const handleCreateCustomer = () => {
-
+      setIsFormOpen(true);
     };
 
-    const handleEditCustomer = () => {
+    const handleEditCustomer = async (customerData) => {
+      try {
+        const response = await customerApi.updateCustomer(customerData.customer_uid || customerData.customer_id, customerData);
+        
+        // Update the customer in the local state
+        setCustomers(prev => prev.map(customer => 
+          (customer.customer_uid || customer.customer_id) === (customerData.customer_uid || customerData.customer_id) 
+            ? { ...customer, ...response } 
+            : customer
+        ));
+        
+        // Update the selected customer if it's the one being edited
+        if (selectedCustomer && (selectedCustomer.customer_uid || selectedCustomer.customer_id) === (customerData.customer_uid || customerData.customer_id)) {
+          setSelectedCustomer({ ...selectedCustomer, ...response });
+        }
 
+        console.log('Customer updated successfully');
+      } catch (err) {
+        console.error('Error updating customer:', err);
+        throw err; // Re-throw to let the modal handle the error
+      }
+    };
+
+    const handleDeleteCustomer = async (customerId) => {
+      if (window.confirm('Are you sure you want to delete this customer?')) {
+        try {
+          await customerApi.deleteCustomer(customerId);
+          
+          // Remove the customer from local state
+          setCustomers(prev => prev.filter(customer => 
+            (customer.customer_uid || customer.customer_id) !== customerId
+          ));
+          
+          // Close modal if the deleted customer was selected
+          if (selectedCustomer && (selectedCustomer.customer_uid || selectedCustomer.customer_id) === customerId) {
+            setSelectedCustomer(null);
+          }
+
+          console.log('Customer deleted successfully');
+        } catch (err) {
+          console.error('Error deleting customer:', err);
+          alert('Failed to delete customer. Please try again.');
+        }
+      }
+    };
+
+    const handleFormSubmit = async (customerData) => {
+      try {
+        const response = await customerApi.createCustomer(customerData);
+        
+        // Add the new customer to the local state
+        setCustomers(prev => [response, ...prev]);
+        
+        setIsFormOpen(false);
+        console.log('Customer created successfully');
+      } catch (err) {
+        console.error('Error creating customer:', err);
+        throw err; // Re-throw to let the form handle the error
+      }
+    };
+
+    const handleCloseModal = () => {
+      setSelectedCustomer(null);
+    };
+
+    const handleCloseForm = () => {
+      setIsFormOpen(false);
     };
 
     if (error) {
       return (
-        <div className="p-6">
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div className="p-6 bg-background min-h-screen">
+          <div className="bg-red-900/20 border border-highlight2 text-highlight2 px-4 py-3 rounded">
             {error}
           </div>
         </div>
       );
     }
 
-
     return (
-      <div className="p-6">
+      <div className="p-6 bg-background min-h-screen">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Customers</h1>
+          <h1 className="text-2xl font-bold text-text">Customers</h1>
           <button 
             onClick={handleCreateCustomer}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            className="bg-highlight1 text-white px-4 py-2 rounded hover:bg-highlight1/80 transition-colors"
           >
             Create Customer
           </button>
@@ -147,27 +211,26 @@ const Customers = () => {
   
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500">Loading Customers...</div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-highlight1"></div>
+            <span className="ml-4 text-text">Loading Customers...</span>
           </div>
         ) : (
           <>
             <CustomerList 
               customers={customers}
-              onEditCustomer={handleEditCustomer}
-              // onDeleteCustomer={}
               onViewCustomer={handleViewCustomer}
             />
             
             {/* Pagination UI */}
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-600">
+            <div className="mt-4 flex items-center justify-between bg-background p-4 rounded-lg border border-gray-700">
+              <div className="text-sm text-gray-400">
                 Showing {customers.length} of {pagination.totalItems} customers
               </div>
               <div className="flex items-center space-x-2">
                 <select
                   value={pagination.perPage}
                   onChange={(e) => handlePerPageChange(Number(e.target.value))}
-                  className="border rounded px-2 py-1"
+                  className="border border-gray-600 bg-background text-text rounded px-2 py-1 focus:border-highlight1"
                 >
                   <option value={10}>10 per page</option>
                   <option value={20}>20 per page</option>
@@ -177,17 +240,17 @@ const Customers = () => {
                   <button
                     onClick={() => handlePageChange(pagination.currentPage - 1)}
                     disabled={pagination.currentPage === 1}
-                    className="px-3 py-1 border rounded disabled:opacity-50"
+                    className="px-3 py-1 border border-gray-600 bg-background text-text rounded disabled:opacity-50 hover:bg-gray-800 transition-colors"
                   >
                     Previous
                   </button>
-                  <span className="px-3 py-1">
+                  <span className="px-3 py-1 text-text">
                     Page {pagination.currentPage} of {pagination.totalPages}
                   </span>
                   <button
                     onClick={() => handlePageChange(pagination.currentPage + 1)}
                     disabled={pagination.currentPage === pagination.totalPages}
-                    className="px-3 py-1 border rounded disabled:opacity-50"
+                    className="px-3 py-1 border border-gray-600 bg-background text-text rounded disabled:opacity-50 hover:bg-gray-800 transition-colors"
                   >
                     Next
                   </button>
@@ -195,7 +258,25 @@ const Customers = () => {
               </div>
             </div>
           </>
-        )} 
+        )}
+
+        {/* Customer Details Modal */}
+        {selectedCustomer && (
+          <CustomerDetailsModal
+            customer={selectedCustomer}
+            onClose={handleCloseModal}
+            onSubmit={handleEditCustomer}
+            onDelete={handleDeleteCustomer}
+          />
+        )}
+
+        {/* Customer Form Modal */}
+        {isFormOpen && (
+          <CustomerForm
+            onClose={handleCloseForm}
+            onSubmit={handleFormSubmit}
+          />
+        )}
       </div>
     );
   };

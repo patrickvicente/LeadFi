@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS "activity" (
   "description" text,
   "date_created" timestamp NOT NULL,
   "bd" varchar(20)
+  -- "date_due" datetime NOT NULL DEFAULT CURRENT_TIMESTAMP -- when the activity is due
   -- "status" VARCHAR(50) DEFAULT 'pending' -- 'completed', 'failed', 'cancelled'
 );
 

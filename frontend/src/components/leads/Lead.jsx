@@ -5,8 +5,7 @@ const Lead = ({ lead, onView }) => {
         full_name = 'No Name',
         status = 'Unknown',
         type = 'Unknown',
-        company_name = 'Unknown',
-        lead_id
+        company_name = 'Unknown'
       } = lead || {};
 
   const getStatusBadge = (status) => {

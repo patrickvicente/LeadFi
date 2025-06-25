@@ -167,8 +167,8 @@ const Leads = () => {
 
   if (error) {
     return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+      <div className="p-6 bg-background min-h-screen">
+        <div className="bg-red-900/20 border border-highlight2 text-highlight2 px-4 py-3 rounded">
           {error}
         </div>
       </div>
@@ -176,12 +176,12 @@ const Leads = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-background min-h-screen">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Leads</h1>
+        <h1 className="text-2xl font-bold text-text">Leads</h1>
         <button 
           onClick={handleAddLead}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          className="bg-highlight1 text-white px-4 py-2 rounded hover:bg-highlight1/80 transition-colors"
         >
           Add Lead
         </button>
@@ -196,7 +196,7 @@ const Leads = () => {
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-highlight1"></div>
         </div>
       ) : (
         <>
