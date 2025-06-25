@@ -20,15 +20,19 @@ class LeadResource(Resource):
 
     def get(self, id=None):
         """
-        GET /api/leads           - List leads (with optional pagination/filtering)
+        GET /api/leads           - List leads (with optional pagination/filtering/sorting)
         GET /api/leads/<id>      - Get a single lead by ID
         """
         if id is None:
-            # Handle list endpoint with pagination and filtering
+            # Handle list endpoint with pagination, filtering, and sorting
             page = request.args.get('page', 1, type=int)         # Page number (default 1)
             per_page = request.args.get('per_page', 10, type=int) # Items per page (default 10)
             status = request.args.get('status')                  # Optional filter by status
             source = request.args.get('source')                  # Optional filter by source
+            
+            # Sorting parameters
+            sort_by = request.args.get('sort_by')                # Field to sort by
+            sort_order = request.args.get('sort_order', 'asc')   # asc or desc (default asc)
 
             query = Lead.query                                   # Start with all leads
 
@@ -38,6 +42,33 @@ class LeadResource(Resource):
             if source:
                 query = query.filter(Lead.source == source)
 
+            # Apply sorting if requested
+            if sort_by:
+                # Map frontend field names to model attributes if needed
+                field_mapping = {
+                    'date_created': Lead.date_created,
+                    'status': Lead.status,
+                    'full_name': Lead.full_name,
+                    'company_name': Lead.company_name,
+                    'type': Lead.type,
+                    'source': Lead.source,
+                    'bd_in_charge': Lead.bd_in_charge
+                }
+                
+                if sort_by in field_mapping:
+                    sort_field = field_mapping[sort_by]
+                    
+                    if sort_order.lower() == 'desc':
+                        query = query.order_by(sort_field.desc())
+                    else:
+                        query = query.order_by(sort_field.asc())
+                else:
+                    # If invalid sort field, just ignore and use default ordering
+                    query = query.order_by(Lead.date_created.desc())
+            else:
+                # Default ordering by date_created descending (newest first)
+                query = query.order_by(Lead.date_created.desc())
+
             # Paginate the results
             pagination = query.paginate(page=page, per_page=per_page)
 
@@ -46,7 +77,9 @@ class LeadResource(Resource):
                 'leads': self.schema_many.dump(pagination.items),
                 'total': pagination.total,
                 'pages': pagination.pages,
-                'current_page': page
+                'current_page': page,
+                'sort_by': sort_by,
+                'sort_order': sort_order
             }, HTTPStatus.OK
 
         # If an ID is provided, return a single lead or 404 if not found

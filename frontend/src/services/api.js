@@ -130,6 +130,33 @@ export const customerApi = {
     } catch (error) {
       throw new Error('Failed to fetch customer');
     }
+  },
+
+  createCustomer: async (customerData) => {
+    try {
+      const response = await api.post('/customers', customerData);
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to create customer');
+    }
+  },
+
+  updateCustomer: async (customerId, customerData) => {
+    try {
+      const response = await api.put(`/customers/${customerId}`, customerData);
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to update customer');
+    }
+  },
+
+  deleteCustomer: async (customerId) => {
+    try {
+      await api.delete(`/customers/${customerId}`);
+      return true;
+    } catch (error) {
+      throw new Error('Failed to delete customer');
+    }
   }
 };
 

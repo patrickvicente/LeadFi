@@ -9,6 +9,7 @@ const Customers = () => {
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [customerDetailsLoading, setCustomerDetailsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [filters, setFilters] = useState({
@@ -103,8 +104,26 @@ const Customers = () => {
       ]
     };
 
-    const handleViewCustomer = (customer) => {
-      setSelectedCustomer(customer);
+    const handleViewCustomer = async (customer) => {
+      try {
+        setCustomerDetailsLoading(true);
+        // Fetch complete customer details with related leads
+        const response = await customerApi.getCustomer(customer.customer_uid || customer.customer_id);
+        
+        if (response && response.customer) {
+          setSelectedCustomer(response.customer);
+        } else {
+          console.error('Invalid customer response:', response);
+          // Fallback to the customer data from the list (without related leads)
+          setSelectedCustomer(customer);
+        }
+      } catch (err) {
+        console.error('Error fetching customer details:', err);
+        // Fallback to the customer data from the list (without related leads)
+        setSelectedCustomer(customer);
+      } finally {
+        setCustomerDetailsLoading(false);
+      }
     };
 
     const handleCreateCustomer = () => {
@@ -261,9 +280,10 @@ const Customers = () => {
         )}
 
         {/* Customer Details Modal */}
-        {selectedCustomer && (
+        {(selectedCustomer || customerDetailsLoading) && (
           <CustomerDetailsModal
             customer={selectedCustomer}
+            loading={customerDetailsLoading}
             onClose={handleCloseModal}
             onSubmit={handleEditCustomer}
             onDelete={handleDeleteCustomer}

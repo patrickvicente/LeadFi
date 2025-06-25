@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatDate } from '../../utils/dateFormat';
+import { formatDateOnly } from '../../utils/dateFormat';
 
 const CustomerList = ({ customers = [], onViewCustomer }) => {
     //  check for customer array
@@ -8,14 +8,31 @@ const CustomerList = ({ customers = [], onViewCustomer }) => {
         return null;
     }
 
-  const getStatusBadge = (isClosed) => {
-    return isClosed ? (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-highlight2 text-white">
-        Closed
-      </span>
-    ) : (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-highlight5 text-white">
-        Active
+  const getStatusBadge = (leadStatus) => {
+    if (!leadStatus) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-700 text-gray-300">
+          No Status
+        </span>
+      );
+    }
+
+    const statusColors = {
+      'lead generated': 'bg-blue-600 text-white',
+      'proposal': 'bg-yellow-600 text-white',
+      'negotiation': 'bg-orange-600 text-white',
+      'registration': 'bg-purple-600 text-white',
+      'integration': 'bg-indigo-600 text-white',
+      'closed won': 'bg-highlight5 text-white',
+      'lost': 'bg-highlight2 text-white',
+      'default': 'bg-gray-700 text-gray-300'
+    };
+    
+    const colorClass = statusColors[leadStatus.toLowerCase()] || statusColors.default;
+    
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
+        {leadStatus}
       </span>
     );
   };
@@ -65,14 +82,14 @@ const CustomerList = ({ customers = [], onViewCustomer }) => {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[100px]">
                 Type
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[100px]">
-                Status
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px]">
+                Lead Status
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[140px]">
                 BD in Charge
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[100px]">
-                Created
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px]">
+                Date Converted
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[100px]">
                 Closed
@@ -109,22 +126,22 @@ const CustomerList = ({ customers = [], onViewCustomer }) => {
                 <td className="px-4 py-4 whitespace-nowrap min-w-[100px]">
                   {getTypeBadge(customer.type)}
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap min-w-[100px]">
-                  {getStatusBadge(customer.is_closed)}
+                <td className="px-4 py-4 whitespace-nowrap min-w-[120px]">
+                  {getStatusBadge(customer.lead_status)}
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[140px]">
                   <div className="truncate" title={customer.bd_in_charge || 'Unassigned'}>
                     {customer.bd_in_charge || 'Unassigned'}
                   </div>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-400 min-w-[100px]">
-                  <div className="truncate" title={customer.date_created ? formatDate(customer.date_created) : 'Unknown'}>
-                    {customer.date_created ? formatDate(customer.date_created) : 'Unknown'}
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-400 min-w-[120px]">
+                  <div className="truncate" title={customer.date_converted ? formatDateOnly(customer.date_converted) : 'Unknown'}>
+                    {customer.date_converted ? formatDateOnly(customer.date_converted) : 'Unknown'}
                   </div>
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-400 min-w-[100px]">
-                  <div className="truncate" title={customer.date_closed ? formatDate(customer.date_closed) : 'N/A'}>
-                    {customer.date_closed ? formatDate(customer.date_closed) : 'N/A'}
+                  <div className="truncate" title={customer.date_closed ? formatDateOnly(customer.date_closed) : 'N/A'}>
+                    {customer.date_closed ? formatDateOnly(customer.date_closed) : 'N/A'}
                   </div>
                 </td>
               </tr>

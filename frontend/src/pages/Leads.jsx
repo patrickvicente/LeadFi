@@ -4,6 +4,7 @@ import LeadList from '../components/leads/LeadList';
 import LeadForm from '../components/leads/LeadForm';
 import LeadDetailsModal from '../components/leads/LeadDetailsModal';
 import { leadApi } from '../services/api';
+import { useServerSorting } from '../utils/useServerSorting';
 
 const Leads = () => {
   const [leads, setLeads] = useState([]);
@@ -26,21 +27,35 @@ const Leads = () => {
     totalItems: 0
   });
 
-  // Fetch leads with pagination and filters
-  const fetchLeads = async () => {
+  // Initialize server-side sorting
+  const sortHandlers = useServerSorting((sortField, sortDirection) => {
+    // Reset to first page when sorting changes
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    // Trigger data fetch with new sort parameters
+    fetchLeads(1, pagination.perPage, sortField, sortDirection);
+  });
+
+  // Fetch leads with pagination, filters, and sorting
+  const fetchLeads = async (page = pagination.currentPage, perPage = pagination.perPage, sortBy = sortHandlers.sortField, sortOrder = sortHandlers.sortDirection) => {
     try {
       setLoading(true);
       setError(null);
       
       // Prepare query parameters
       const params = {
-        page: pagination.currentPage,
-        per_page: pagination.perPage
+        page: page,
+        per_page: perPage
       };
 
       // Add filters if they're not 'all'
       if (filters.status !== 'all') params.status = filters.status;
       if (filters.source !== 'all') params.source = filters.source;
+      
+      // Add sorting parameters if present
+      if (sortBy) {
+        params.sort_by = sortBy;
+        params.sort_order = sortOrder;
+      }
       
       console.log('Fetching leads with params:', params);
       
@@ -52,6 +67,8 @@ const Leads = () => {
         setLeads(response.leads);
         setPagination(prev => ({
           ...prev,
+          currentPage: page,
+          perPage: perPage,
           totalPages: response.pages,
           totalItems: response.total
         }));
@@ -72,7 +89,7 @@ const Leads = () => {
     fetchLeads();
   }, []);
 
-  // Fetch when pagination or filters change
+  // Fetch when pagination or filters change (but not sorting, as that's handled by the sort callback)
   useEffect(() => {
     fetchLeads();
   }, [pagination.currentPage, pagination.perPage, filters.status, filters.source]);
@@ -203,6 +220,7 @@ const Leads = () => {
           <LeadList 
             leads={leads}
             onViewLead={handleViewLead}
+            sortHandlers={sortHandlers}
           />
           
           {/* Pagination UI */}
@@ -258,8 +276,8 @@ const Leads = () => {
           onClose={() => setSelectedLeadDetails(null)}
           onEdit={handleEditLead}
           onDelete={handleDeleteLead}
-          onConvert={handleConvertToCustomer}
           onSubmit={handleUpdateLead}
+          onConvert={handleConvertToCustomer}
         />
       )}
     </div>

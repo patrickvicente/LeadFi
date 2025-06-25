@@ -1,7 +1,14 @@
 import React from 'react';
-import { formatDate } from '../../utils/dateFormat';
+import { formatDateOnly } from '../../utils/dateFormat';
 
-const LeadList = ({ leads = [], onViewLead }) => {
+const LeadList = ({ leads = [], onViewLead, sortHandlers }) => {
+    // Initialize sorting handlers from props
+    const {
+      handleSort,
+      getSortIcon,
+      getSortClasses
+    } = sortHandlers;
+
     //  check for lead array
     if (!Array.isArray(leads)) {
         console.error('Leads prop must be an array');
@@ -83,11 +90,15 @@ const LeadList = ({ leads = [], onViewLead }) => {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px]">
                 Company
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[180px]">
-                Email
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[140px]">
-                Status
+              <th 
+                className={`px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[140px] ${getSortClasses('status')}`}
+                onClick={() => handleSort('status')}
+                title="Click to sort by status"
+              >
+                <div className="flex items-center justify-between">
+                  Status
+                  <span className="ml-1 text-gray-400">{getSortIcon('status')}</span>
+                </div>
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[100px]">
                 Type
@@ -101,8 +112,15 @@ const LeadList = ({ leads = [], onViewLead }) => {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px]">
                 Converted
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[100px]">
-                Created
+              <th 
+                className={`px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[100px] ${getSortClasses('date_created')}`}
+                onClick={() => handleSort('date_created')}
+                title="Click to sort by creation date"
+              >
+                <div className="flex items-center justify-between">
+                  Created
+                  <span className="ml-1 text-gray-400">{getSortIcon('date_created')}</span>
+                </div>
               </th>
             </tr>
           </thead>
@@ -128,11 +146,6 @@ const LeadList = ({ leads = [], onViewLead }) => {
                     {lead.company_name || 'Unknown'}
                   </div>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[180px]">
-                  <div className="truncate" title={lead.email || 'No email'}>
-                    {lead.email || 'No email'}
-                  </div>
-                </td>
                 <td className="px-4 py-4 whitespace-nowrap min-w-[140px]">
                   {getStatusBadge(lead.status)}
                 </td>
@@ -153,8 +166,8 @@ const LeadList = ({ leads = [], onViewLead }) => {
                   {getConvertedBadge(lead.is_converted)}
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-400 min-w-[100px]">
-                  <div className="truncate" title={lead.date_created ? formatDate(lead.date_created) : 'Unknown'}>
-                    {lead.date_created ? formatDate(lead.date_created) : 'Unknown'}
+                  <div className="truncate" title={lead.date_created ? formatDateOnly(lead.date_created) : 'Unknown'}>
+                    {lead.date_created ? formatDateOnly(lead.date_created) : 'Unknown'}
                   </div>
                 </td>
               </tr>

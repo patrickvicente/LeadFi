@@ -36,17 +36,20 @@ class CustomerResource(Resource):
             # Paginate the results
             pagination = query.paginate(page=page, per_page=per_page)
             
+            # Convert to dict with lead information
+            customers_data = [customer.to_dict(include_leads=False) for customer in pagination.items]
+            
             # Return paginated, serialized results
             return {
-                'customer': self.schema_many.dump(pagination.items),
+                'customer': customers_data,
                 'total': pagination.total,
                 'pages': pagination.pages,
                 'current_page': page
             }, HTTPStatus.OK
         
-        # If a UID is provided, return single customer or 404 if not found
+        # If a UID is provided, return single customer with related leads
         customer = Customer.query.get_or_404(customer_uid)
-        return {'customer': self.schema.dump(customer)}, HTTPStatus.OK
+        return {'customer': customer.to_dict(include_leads=True)}, HTTPStatus.OK
     
     def put(self, customer_uid):
         """
@@ -66,7 +69,7 @@ class CustomerResource(Resource):
             for key, value in json_data.items():
                 setattr(customer, key, value)
             db.session.commit()
-            return {'customer': self.schema.dump(customer)}, HTTPStatus.OK
+            return {'customer': customer.to_dict(include_leads=True)}, HTTPStatus.OK
         
         except Exception as e:
             db.session.rollback()
