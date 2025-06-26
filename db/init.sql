@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS "lead" (
 -- Customer Table
 CREATE TABLE IF NOT EXISTS "customer" (
   "customer_uid" INTEGER PRIMARY KEY NOT NULL, -- Changed from char(8) to INTEGER
-  -- registered_email varcharc(120) need to implement this
+  "registered_email" varchar(120),
   "type" varchar(50),
   "name" varchar(120) NOT NULL,
   "is_closed" BOOLEAN DEFAULT FALSE,
