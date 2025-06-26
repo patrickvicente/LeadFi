@@ -6,6 +6,7 @@ class Customer(db.Model):
 
     customer_uid = db.Column(db.Integer, primary_key=True, nullable=False)
     name = db.Column(db.String(120), nullable=False)
+    registered_email = db.Column(db.String(120))
     type = db.Column(db.String(50))
     country = db.Column(db.String(50))
     is_closed = db.Column(db.Boolean, default=False)
@@ -85,6 +86,7 @@ class Customer(db.Model):
         result = {
             'customer_uid': self.customer_uid,
             'name': self.name,
+            'registered_email': self.registered_email,
             'type': self.type,
             'country': self.country,
             'is_closed': self.is_closed,

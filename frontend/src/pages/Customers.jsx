@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Filter from "../components/common/Filter"; 
 import CustomerList from "../components/customers/CustomerList";
 import CustomerForm from "../components/customers/CustomerForm";
@@ -9,6 +9,7 @@ import { useServerSorting } from "../utils/useServerSorting";
 
 const Customers = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -40,6 +41,14 @@ const Customers = () => {
         setPagination(prev => ({ ...prev, currentPage: 1 }));
         fetchCustomers();
     });
+
+    // Check for customer_uid in URL parameters and fetch that customer
+    useEffect(() => {
+        const customerId = searchParams.get('customer_uid');
+        if (customerId) {
+            fetchCustomerDetails(customerId);
+        }
+    }, [searchParams]);
 
     // Fetch customers with pagination and filters
     const fetchCustomers = async () => {
@@ -81,6 +90,29 @@ const Customers = () => {
     } finally {
       setLoading(false);
     }
+    };
+
+    // Fetch specific customer details by ID
+    const fetchCustomerDetails = async (customerId) => {
+        try {
+            setCustomerDetailsLoading(true);
+            const response = await customerApi.getCustomer(customerId);
+            if (response && response.customer) {
+                setSelectedCustomer(response.customer);
+            } else {
+                console.error('Customer not found:', customerId);
+                // Remove invalid customer_uid from URL
+                searchParams.delete('customer_uid');
+                setSearchParams(searchParams);
+            }
+        } catch (err) {
+            console.error('Error fetching customer details:', err);
+            // Remove invalid customer_uid from URL
+            searchParams.delete('customer_uid');
+            setSearchParams(searchParams);
+        } finally {
+            setCustomerDetailsLoading(false);
+        }
     };
 
     // Initial fetch
@@ -134,26 +166,10 @@ const Customers = () => {
       ]
     };
 
-    const handleViewCustomer = async (customer) => {
-      try {
-        setCustomerDetailsLoading(true);
-        // Fetch complete customer details with related leads
-        const response = await customerApi.getCustomer(customer.customer_uid || customer.customer_id);
-        
-        if (response && response.customer) {
-          setSelectedCustomer(response.customer);
-        } else {
-          console.error('Invalid customer response:', response);
-          // Fallback to the customer data from the list (without related leads)
-          setSelectedCustomer(customer);
-        }
-      } catch (err) {
-        console.error('Error fetching customer details:', err);
-        // Fallback to the customer data from the list (without related leads)
-        setSelectedCustomer(customer);
-      } finally {
-        setCustomerDetailsLoading(false);
-      }
+    const handleViewCustomer = (customer) => {
+        const customerId = customer.customer_uid || customer.customer_id;
+        // Add customer_uid to URL for direct linking
+        setSearchParams({ customer_uid: customerId });
     };
 
     const handleCreateCustomer = () => {
@@ -222,7 +238,10 @@ const Customers = () => {
     };
 
     const handleCloseModal = () => {
-      setSelectedCustomer(null);
+        setSelectedCustomer(null);
+        // Remove customer_uid from URL when closing
+        searchParams.delete('customer_uid');
+        setSearchParams(searchParams);
     };
 
     const handleCloseForm = () => {

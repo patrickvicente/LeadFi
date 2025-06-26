@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon, EyeIcon } from '@heroicons/react/24/outline';
-import { formatDate, formatDateOnly } from '../../utils/dateFormat';
+import { formatDateOnly } from '../../utils/dateFormat';
 import { optionHelpers } from '../../config/options';
 import { validateForm } from '../../utils/formValidation';
 import ActionButtons from '../common/ActionButtons';
@@ -13,7 +13,7 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
 
   const validationRules = {
     required: ['name', 'customer_uid', 'type'],
-    email: ['email'],
+    email: ['registered_email'],
     phone: ['phone_number'],
     url: ['linkedin_url']
   };
@@ -218,17 +218,17 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
 
                     {/* Contact Information */}
                     <div>
-                      <label className="block text-sm font-medium text-text">Email</label>
+                      <label className="block text-sm font-medium text-text">Registered Email</label>
                       <input
                         type="email"
-                        name="email"
-                        value={formData.email || ''}
+                        name="registered_email"
+                        value={formData.registered_email || ''}
                         onChange={handleChange}
                         className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
-                          errors.email ? 'border-highlight2' : ''
+                          errors.registered_email ? 'border-highlight2' : ''
                         }`}
                       />
-                      {renderError('email')}
+                      {renderError('registered_email')}
                     </div>
 
                     <div>
@@ -324,6 +324,7 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
                       <div className="space-y-2 text-text">
                         <p><span className="font-medium">Name:</span> {customer.name}</p>
                         <p><span className="font-medium">Customer ID:</span> {customer.customer_uid || customer.customer_id}</p>
+                        <p><span className="font-medium">Registered Email:</span> {customer.registered_email || 'N/A'}</p>
                         <p><span className="font-medium">Country:</span> {customer.country || 'N/A'}</p>
                       </div>
                     </div>

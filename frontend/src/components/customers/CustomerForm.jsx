@@ -10,13 +10,11 @@ const CustomerForm = ({ onClose, onSubmit, customer = null }) => {
   const [formData, setFormData] = useState({
     name: customer?.name || '',
     customer_uid: customer?.customer_uid || '',
-    email: customer?.email || '',
-    phone_number: customer?.phone_number || '',
+    registered_email: customer?.registered_email || '',
     country: customer?.country || '',
     type: customer?.type || '',
     bd_in_charge: customer?.bd_in_charge || '',
-    is_closed: customer?.is_closed || false,
-    notes: customer?.notes || ''
+    is_closed: customer?.is_closed || false
   });
 
   const [errors, setErrors] = useState({});
@@ -24,7 +22,7 @@ const CustomerForm = ({ onClose, onSubmit, customer = null }) => {
 
   const validationRules = {
     required: ['name', 'customer_uid', 'type'],
-    email: ['email'],
+    email: ['registered_email'],
     phone: ['phone_number']
   };
 
@@ -140,17 +138,17 @@ const CustomerForm = ({ onClose, onSubmit, customer = null }) => {
 
               {/* Contact Information */}
               <div>
-                <label className="block text-sm font-medium text-text">Email</label>
+                <label className="block text-sm font-medium text-text">Registered Email</label>
                 <input
                   type="email"
-                  name="email"
-                  value={formData.email}
+                  name="registered_email"
+                  value={formData.registered_email}
                   onChange={handleChange}
                   className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
-                    errors.email ? 'border-highlight2' : ''
+                    errors.registered_email ? 'border-highlight2' : ''
                   }`}
                 />
-                {renderError('email')}
+                {renderError('registered_email')}
               </div>
 
               <div>

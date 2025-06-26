@@ -67,11 +67,6 @@ export const customerOptions = {
     { value: 'family office', label: 'Family Office' },
     { value: 'hft', label: 'HFT' },
     { value: 'other', label: 'Other' }
-  ],
-  status: [
-    { value: 'active', label: 'Active' },
-    { value: 'inactive', label: 'Inactive' },
-    { value: 'closed', label: 'Closed' }
   ]
   // Add more customer-specific options
 };
