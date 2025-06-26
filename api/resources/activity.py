@@ -1,16 +1,19 @@
 from flask_restful import Resource
 from flask import request
 from api.models.activity import Activity
-from api.schemas.activity_schema import ActivitySchema, ActivityCreateSchema
+from api.schemas.activity_schema import ActivitySchema, ActivityCreateSchema, TaskCreateSchema, TaskUpdateSchema
 from db.db_config import db
 from http import HTTPStatus
 from sqlalchemy import desc, and_, or_
+from datetime import datetime
 
 class ActivityResource(Resource):
     def __init__(self):
         self.schema = ActivitySchema()
         self.schema_many = ActivitySchema(many=True)
         self.create_schema = ActivityCreateSchema()
+        self.task_create_schema = TaskCreateSchema()
+        self.task_update_schema = TaskUpdateSchema()
 
     def get(self, activity_id=None):
         """
@@ -27,8 +30,14 @@ class ActivityResource(Resource):
             customer_uid = request.args.get('customer_uid', type=int)
             activity_category = request.args.get('category')
             activity_type = request.args.get('type')
-            bd_in_charge = request.args.get('bd')
             visible_only = request.args.get('visible_only', 'true').lower() == 'true'
+            
+            # Task-specific filters
+            status = request.args.get('status')
+            priority = request.args.get('priority')
+            assigned_to = request.args.get('assigned_to')
+            overdue_only = request.args.get('overdue_only', 'false').lower() == 'true'
+            tasks_only = request.args.get('tasks_only', 'false').lower() == 'true'
             
             # Sorting
             sort_by = request.args.get('sort_by', 'date_created')
@@ -46,10 +55,24 @@ class ActivityResource(Resource):
                 query = query.filter(Activity.activity_category == activity_category)
             if activity_type:
                 query = query.filter(Activity.activity_type == activity_type)
-            if bd_in_charge:
-                query = query.filter(Activity.bd_in_charge == bd_in_charge)
             if visible_only:
                 query = query.filter(Activity.is_visible_to_bd == True)
+                
+            # Task-specific filters
+            if status:
+                query = query.filter(Activity.status == status)
+            if priority:
+                query = query.filter(Activity.priority == priority)
+            if assigned_to:
+                query = query.filter(Activity.assigned_to == assigned_to)
+            if overdue_only:
+                from datetime import datetime
+                query = query.filter(
+                    Activity.due_date < datetime.utcnow(),
+                    Activity.status.in_(['pending', 'in_progress'])
+                )
+            if tasks_only:
+                query = query.filter(Activity.status.in_(['pending', 'in_progress']))
 
             # Apply sorting
             if sort_by == 'date_created':
@@ -99,8 +122,7 @@ class ActivityResource(Resource):
                 customer_uid=json_data.get('customer_uid'),
                 activity_type=json_data['activity_type'],
                 description=json_data['description'],
-                bd_in_charge=json_data.get('bd_in_charge'),
-                created_by=json_data.get('bd_in_charge')  # BD creates the activity
+                created_by=json_data.get('created_by')  # Who creates the activity
             )
             
             db.session.commit()
@@ -226,4 +248,132 @@ class ActivityStatsResource(Resource):
             'system_activities': system_count,
             'automated_activities': automated_count,
             'recent_activities_7_days': recent_count
-        }, HTTPStatus.OK 
+        }, HTTPStatus.OK
+
+
+class TaskResource(Resource):
+    """Resource specifically for task management"""
+    
+    def __init__(self):
+        self.schema = ActivitySchema()
+        self.schema_many = ActivitySchema(many=True)
+        self.create_schema = TaskCreateSchema()
+        self.update_schema = TaskUpdateSchema()
+
+    def post(self):
+        """Create a new task"""
+        json_data = request.get_json()
+        if not json_data:
+            return {'message': 'No input data provided'}, HTTPStatus.BAD_REQUEST
+
+        # Validate input
+        errors = self.create_schema.validate(json_data)
+        if errors:
+            return {'errors': errors}, HTTPStatus.BAD_REQUEST
+
+        try:
+            # Create task using helper method
+            # assigned_to will default to bd_in_charge in the model if not provided
+            task = Activity.create_task(
+                activity_type=json_data['activity_type'],
+                description=json_data['description'],
+                due_date=json_data['due_date'],
+                lead_id=json_data.get('lead_id'),
+                customer_uid=json_data.get('customer_uid'),
+                priority=json_data.get('priority', 'medium'),
+                assigned_to=json_data.get('assigned_to')  # Will default to lead/customer bd_in_charge if None
+            )
+            
+            db.session.commit()
+            return {'task': self.schema.dump(task)}, HTTPStatus.CREATED
+
+        except Exception as e:
+            db.session.rollback()
+            return {'message': 'Error creating task', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+
+    def put(self, task_id):
+        """Update a task"""
+        task = Activity.query.get_or_404(task_id)
+        json_data = request.get_json()
+
+        if not json_data:
+            return {'message': 'No input data provided'}, HTTPStatus.BAD_REQUEST
+
+        # Only allow updating tasks (not completed activities)
+        if task.status not in [Activity.PENDING, Activity.IN_PROGRESS]:
+            return {'message': 'Only pending or in-progress tasks can be updated'}, HTTPStatus.BAD_REQUEST
+
+        # Validate input
+        errors = self.update_schema.validate(json_data)
+        if errors:
+            return {'errors': errors}, HTTPStatus.BAD_REQUEST
+
+        try:
+            # Update allowed fields
+            if 'description' in json_data:
+                task.description = json_data['description']
+            if 'due_date' in json_data:
+                task.due_date = json_data['due_date']
+            if 'priority' in json_data:
+                task.priority = json_data['priority']
+            if 'assigned_to' in json_data:
+                task.assigned_to = json_data['assigned_to']
+            if 'status' in json_data:
+                task.status = json_data['status']
+                if json_data['status'] == Activity.COMPLETED:
+                    task.date_completed = datetime.utcnow()
+
+            db.session.commit()
+            return {'task': self.schema.dump(task)}, HTTPStatus.OK
+
+        except Exception as e:
+            db.session.rollback()
+            return {'message': 'Error updating task', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+class TaskCompleteResource(Resource):
+    """Resource for completing tasks"""
+    
+    def __init__(self):
+        self.schema = ActivitySchema()
+
+    def post(self, task_id):
+        """Complete a task"""
+        task = Activity.query.get_or_404(task_id)
+        json_data = request.get_json() or {}
+
+        try:
+            success = task.complete_task(json_data.get('completion_notes'))
+            if success:
+                db.session.commit()
+                return {'task': self.schema.dump(task)}, HTTPStatus.OK
+            else:
+                return {'message': 'Task cannot be completed (already completed or cancelled)'}, HTTPStatus.BAD_REQUEST
+
+        except Exception as e:
+            db.session.rollback()
+            return {'message': 'Error completing task', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+class TaskCancelResource(Resource):
+    """Resource for cancelling tasks"""
+    
+    def __init__(self):
+        self.schema = ActivitySchema()
+
+    def post(self, task_id):
+        """Cancel a task"""
+        task = Activity.query.get_or_404(task_id)
+        json_data = request.get_json() or {}
+
+        try:
+            success = task.cancel_task(json_data.get('reason'))
+            if success:
+                db.session.commit()
+                return {'task': self.schema.dump(task)}, HTTPStatus.OK
+            else:
+                return {'message': 'Task cannot be cancelled (already completed or cancelled)'}, HTTPStatus.BAD_REQUEST
+
+        except Exception as e:
+            db.session.rollback()
+            return {'message': 'Error cancelling task', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR 

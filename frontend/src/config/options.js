@@ -149,6 +149,33 @@ export const activityOptions = {
     { value: 'document_viewed', label: 'Document Viewed', category: 'automated' },
     { value: 'trading_activity', label: 'Trading Activity', category: 'automated' },
     { value: 'account_milestone', label: 'Account Milestone', category: 'automated' }
+  ],
+
+  // Task Status Options
+  taskStatuses: [
+    { value: 'pending', label: 'Pending' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'cancelled', label: 'Cancelled' }
+  ],
+
+  // Priority Options
+  priorities: [
+    { value: 'low', label: 'Low Priority' },
+    { value: 'medium', label: 'Medium Priority' },
+    { value: 'high', label: 'High Priority' }
+  ],
+
+  // Task-specific activity types (ones that make sense as tasks)
+  taskActivityTypes: [
+    { value: 'follow_up', label: 'Follow Up' },
+    { value: 'call', label: 'Schedule Call' },
+    { value: 'email', label: 'Send Email' },
+    { value: 'meeting', label: 'Schedule Meeting' },
+    { value: 'proposal_sent', label: 'Send Proposal' },
+    { value: 'demo', label: 'Product Demo' },
+    { value: 'negotiation', label: 'Negotiation' },
+    { value: 'onboarding', label: 'Customer Onboarding' }
   ]
 };
 

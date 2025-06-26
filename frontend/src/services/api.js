@@ -255,6 +255,100 @@ export const activityApi = {
     } catch (error) {
       throw new Error('Failed to fetch customer activities');
     }
+  },
+
+  // ==================== TASK MANAGEMENT ====================
+
+  // Create a new task
+  createTask: async (taskData) => {
+    try {
+      const response = await api.post('/tasks', taskData);
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to create task');
+    }
+  },
+
+  // Update a task
+  updateTask: async (taskId, taskData) => {
+    try {
+      const response = await api.put(`/tasks/${taskId}`, taskData);
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to update task');
+    }
+  },
+
+  // Complete a task
+  completeTask: async (taskId, completionNotes = null) => {
+    try {
+      const response = await api.post(`/tasks/${taskId}/complete`, {
+        completion_notes: completionNotes
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to complete task');
+    }
+  },
+
+  // Cancel a task
+  cancelTask: async (taskId, reason = null) => {
+    try {
+      const response = await api.post(`/tasks/${taskId}/cancel`, {
+        reason: reason
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to cancel task');
+    }
+  },
+
+  // Get pending tasks
+  getTasks: async (filters = {}) => {
+    try {
+      const response = await api.get('/activities', { 
+        params: { ...filters, tasks_only: 'true' } 
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch tasks');
+    }
+  },
+
+  // Get overdue tasks
+  getOverdueTasks: async (filters = {}) => {
+    try {
+      const response = await api.get('/activities', { 
+        params: { ...filters, overdue_only: 'true' } 
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch overdue tasks');
+    }
+  },
+
+  // Get tasks by status
+  getTasksByStatus: async (status, filters = {}) => {
+    try {
+      const response = await api.get('/activities', { 
+        params: { ...filters, status: status } 
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to fetch ${status} tasks`);
+    }
+  },
+
+  // Get tasks assigned to specific person
+  getAssignedTasks: async (assignedTo, filters = {}) => {
+    try {
+      const response = await api.get('/activities', { 
+        params: { ...filters, assigned_to: assignedTo, tasks_only: 'true' } 
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch assigned tasks');
+    }
   }
 };
 

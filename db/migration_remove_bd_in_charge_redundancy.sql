@@ -1,157 +1,76 @@
--- Drop tables if they exist (for rebuilds)
-DROP TABLE IF EXISTS activity CASCADE;
-DROP TABLE IF EXISTS daily_trading_volume CASCADE;
-DROP TABLE IF EXISTS vip_history CASCADE;
-DROP TABLE IF EXISTS contact CASCADE;
-DROP TABLE IF EXISTS customer CASCADE;
-DROP TABLE IF EXISTS lead CASCADE;
+-- Migration: Remove bd_in_charge redundancy from activity table
+-- This removes bd_in_charge column and updates assigned_to to default to lead.bd_in_charge
 
--- Lead Table
-CREATE TABLE IF NOT EXISTS "lead" (
-  "lead_id" serial PRIMARY KEY NOT NULL,
-  "full_name" varchar(50) NOT NULL,
-  "title" varchar(50),
-  "email" varchar(120),
-  "telegram" varchar(50),
-  "phone_number" varchar(20),
-  "source" varchar(50) NOT NULL, -- [gate, linkedin, hubspot, conference, referral]
-  "status" varchar(50), -- 1. lead generated 2. proposal 3. negotiation 4. registration 5. integration 6. closed won 7. lost
-  "date_created" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "linkedin_url" varchar(255),
-  "company_name" varchar(120),
-  "country" varchar(50),
-  "bd_in_charge" varchar(20) NOT NULL,
-  "background" text,
-  "is_converted" BOOLEAN DEFAULT FALSE,
-  "type" varchar(50) NOT NULL
-);
+BEGIN;
 
--- Customer Table
-CREATE TABLE IF NOT EXISTS "customer" (
-  "customer_uid" INTEGER PRIMARY KEY NOT NULL, -- Changed from char(8) to INTEGER
-  "registered_email" varchar(120),
-  "type" varchar(50),
-  "name" varchar(120) NOT NULL,
-  "is_closed" BOOLEAN DEFAULT FALSE,
-  "date_closed" timestamp,
-  "country" varchar(50),
-  "date_created" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+-- Step 1: Update assigned_to to use lead.bd_in_charge for activities that don't have assigned_to set
+UPDATE activity 
+SET assigned_to = COALESCE(
+    activity.assigned_to,
+    lead.bd_in_charge,
+    activity.bd_in_charge  -- fallback to current value
+)
+FROM lead 
+WHERE activity.lead_id = lead.lead_id 
+AND activity.assigned_to IS NULL;
 
--- Contact Table
-CREATE TABLE IF NOT EXISTS "contact" (
-  "contact_id" serial PRIMARY KEY NOT NULL, -- Unique ID for the contact
-  "customer_uid" INTEGER NOT NULL, -- Changed from char(8) to INTEGER
-  "lead_id" int NOT NULL, -- References lead
-  "is_primary_contact" BOOLEAN DEFAULT TRUE,
-  "date_added" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, -- When the contact was added
-  FOREIGN KEY ("customer_uid") REFERENCES "customer" ("customer_uid") ON DELETE CASCADE,
-  FOREIGN KEY ("lead_id") REFERENCES "lead" ("lead_id") ON DELETE CASCADE
-);
+-- Step 2: Update remaining activities (customer-only activities)
+-- Get BD from the customer's primary lead via contact table
+UPDATE activity 
+SET assigned_to = COALESCE(
+    activity.assigned_to,
+    lead.bd_in_charge,
+    activity.bd_in_charge  -- fallback to current value
+)
+FROM customer
+JOIN contact ON customer.customer_uid = contact.customer_uid AND contact.is_primary_contact = true
+JOIN lead ON contact.lead_id = lead.lead_id
+WHERE activity.customer_uid = customer.customer_uid 
+AND activity.lead_id IS NULL
+AND activity.assigned_to IS NULL;
 
--- Daily Trading Volume Table
-CREATE TABLE IF NOT EXISTS "daily_trading_volume" (
-  "customer_uid" INTEGER NOT NULL, -- Changed from char(8) to INTEGER
-  "date" date NOT NULL,
-  "spot_maker_trading_volume" numeric(18,2),
-  "spot_taker_trading_volume" numeric(18,2),
-  "spot_maker_fees" numeric(6,2),
-  "spot_taker_fees" numeric(6,2),
-  "futures_maker_trading_volume" numeric(18,2),
-  "futures_taker_trading_volume" numeric(18,2),
-  "futures_maker_fees" numeric(6,2),
-  "futures_taker_fees" numeric(6,2),
-  "user_assets" numeric(18,2),
-  PRIMARY KEY ("customer_uid", "date"),
-  FOREIGN KEY ("customer_uid") REFERENCES "customer" ("customer_uid")
-);
+-- Step 3: For any remaining NULL assigned_to, use the current bd_in_charge
+UPDATE activity 
+SET assigned_to = bd_in_charge 
+WHERE assigned_to IS NULL AND bd_in_charge IS NOT NULL;
 
--- VIP History Table
-CREATE TABLE IF NOT EXISTS "vip_history" (
-  "customer_uid" INTEGER NOT NULL, -- Changed from char(8) to INTEGER
-  "date" date NOT NULL,
-  "vip_level" char(2) NOT NULL DEFAULT '0',
-  "spot_mm_level" char(1) DEFAULT '0',
-  "futures_mm_level" char(1) DEFAULT '0',
-  PRIMARY KEY ("customer_uid", "date"),
-  FOREIGN KEY ("customer_uid") REFERENCES "customer" ("customer_uid")
-);
+-- Step 4: Drop dependent views first, then the bd_in_charge column
+DROP VIEW IF EXISTS v_manual_activities CASCADE;
+DROP VIEW IF EXISTS v_system_activities CASCADE;
+DROP VIEW IF EXISTS v_lead_timeline CASCADE;
+DROP VIEW IF EXISTS v_customer_timeline CASCADE;
+DROP VIEW IF EXISTS v_tasks CASCADE;
+DROP VIEW IF EXISTS v_completed_activities CASCADE;
+DROP VIEW IF EXISTS v_overdue_tasks CASCADE;
+DROP VIEW IF EXISTS v_upcoming_tasks CASCADE;
 
--- Enhanced Activity table (supports both activities and tasks)
-CREATE TABLE IF NOT EXISTS "activity" (
-  "activity_id" serial PRIMARY KEY NOT NULL,
-  "lead_id" int,
-  "customer_uid" INTEGER, -- References customer table
-  "activity_type" varchar(50) NOT NULL,
-  "activity_category" varchar(20) NOT NULL DEFAULT 'manual', -- 'manual', 'system', 'automated'
-  "description" text,
-  "metadata" jsonb, -- Structured additional data for system activities
-  "date_created" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "created_by" varchar(50), -- Who/what created the activity
-  "is_visible_to_bd" boolean DEFAULT true, -- Visibility control
-  
-  -- Task-related fields
-  "due_date" timestamp,
-  "status" varchar(20) DEFAULT 'completed', -- 'pending', 'in_progress', 'completed', 'cancelled'
-  "priority" varchar(10) DEFAULT 'medium', -- 'low', 'medium', 'high'
-  "assigned_to" varchar(50), -- Defaults to lead/customer bd_in_charge
-  "date_completed" timestamp,
-  
-  -- Constraints
-  CHECK (activity_category IN ('manual', 'system', 'automated')),
-  CHECK (status IN ('pending', 'in_progress', 'completed', 'cancelled')),
-  CHECK (priority IN ('low', 'medium', 'high')),
-  CHECK (lead_id IS NOT NULL OR customer_uid IS NOT NULL) -- At least one entity must be linked
-);
+-- Now we can drop the bd_in_charge column
+ALTER TABLE activity DROP COLUMN bd_in_charge;
 
-COMMENT ON TABLE "daily_trading_volume" IS 'Composite PK ensures unique daily trading record per customer';
+-- Recreate the views without bd_in_charge
+CREATE OR REPLACE VIEW v_tasks AS
+SELECT * FROM activity 
+WHERE status IN ('pending', 'in_progress') 
+ORDER BY due_date ASC NULLS LAST, priority DESC;
 
--- Enhanced Activity table foreign keys and indexes
-ALTER TABLE "activity" ADD FOREIGN KEY ("lead_id") REFERENCES "lead" ("lead_id") ON DELETE CASCADE;
-ALTER TABLE "activity" ADD FOREIGN KEY ("customer_uid") REFERENCES "customer" ("customer_uid") ON DELETE CASCADE;
+CREATE OR REPLACE VIEW v_completed_activities AS
+SELECT * FROM activity 
+WHERE status = 'completed'
+ORDER BY date_created DESC;
 
--- Performance indexes for activity table
-CREATE INDEX IF NOT EXISTS idx_activity_lead_id ON activity(lead_id);
-CREATE INDEX IF NOT EXISTS idx_activity_customer_uid ON activity(customer_uid);
-CREATE INDEX IF NOT EXISTS idx_activity_type ON activity(activity_type);
-CREATE INDEX IF NOT EXISTS idx_activity_category ON activity(activity_category);
-CREATE INDEX IF NOT EXISTS idx_activity_date_created ON activity(date_created DESC);
-CREATE INDEX IF NOT EXISTS idx_activity_status ON activity(status);
-CREATE INDEX IF NOT EXISTS idx_activity_due_date ON activity(due_date);
-CREATE INDEX IF NOT EXISTS idx_activity_assigned_to ON activity(assigned_to);
-CREATE INDEX IF NOT EXISTS idx_activity_priority ON activity(priority);
+CREATE OR REPLACE VIEW v_overdue_tasks AS
+SELECT * FROM activity 
+WHERE status IN ('pending', 'in_progress') 
+AND due_date < CURRENT_TIMESTAMP
+ORDER BY due_date ASC;
 
--- Functions
+CREATE OR REPLACE VIEW v_system_activities AS
+SELECT * FROM activity WHERE activity_category = 'system';
 
--- Returns the the timestamp and updates date_created
-CREATE OR REPLACE FUNCTION trigger_set_timestamp()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.date_created = now();
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+CREATE OR REPLACE VIEW v_manual_activities AS
+SELECT * FROM activity WHERE activity_category = 'manual';
 
--- Triggers
-
--- This trigger sets the timestamp after a specific event occurs.
-
-CREATE TRIGGER set_timestamp
-BEFORE INSERT
-ON lead
-FOR EACH ROW
-EXECUTE PROCEDURE trigger_set_timestamp();
-
-CREATE TRIGGER set_timestamp
-BEFORE INSERT
-ON activity
-FOR EACH ROW
-EXECUTE PROCEDURE trigger_set_timestamp();
-
--- Enhanced Activity System Functions
-
--- Helper function to create system activities
+-- Step 5: Update the create_system_activity function
 CREATE OR REPLACE FUNCTION create_system_activity(
     p_activity_type VARCHAR(50),
     p_description TEXT,
@@ -205,7 +124,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Helper function to create tasks
+-- Step 6: Update the create_task function
 CREATE OR REPLACE FUNCTION create_task(
     p_activity_type VARCHAR(50),
     p_description TEXT,
@@ -259,7 +178,7 @@ BEGIN
         'pending',
         p_priority,
         final_assigned_to,
-        final_assigned_to,
+        final_assigned_to,  -- creator is the same as assignee by default
         true
     )
     RETURNING activity_id INTO new_activity_id;
@@ -268,7 +187,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Helper function to create manual activities
+-- Step 7: Update the create_manual_activity function
 CREATE OR REPLACE FUNCTION create_manual_activity(
     p_activity_type VARCHAR(50),
     p_description TEXT,
@@ -317,7 +236,7 @@ BEGIN
         p_description,
         'completed',
         CURRENT_TIMESTAMP,
-        default_assigned_to,
+        default_assigned_to,  -- assigned to the bd_in_charge
         final_created_by,
         true
     )
@@ -327,7 +246,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger function for tracking lead changes
+-- Step 8: Update trigger functions to use the new approach
 CREATE OR REPLACE FUNCTION track_lead_changes()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -389,7 +308,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger function for tracking customer changes
+-- Step 9: Update customer tracking function
 CREATE OR REPLACE FUNCTION track_customer_changes()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -436,38 +355,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create triggers for automatic activity tracking
-CREATE TRIGGER lead_activity_tracker
-    AFTER INSERT OR UPDATE ON lead
-    FOR EACH ROW
-    EXECUTE FUNCTION track_lead_changes();
+-- Step 10: Verify the migration
+DO $$
+DECLARE
+    unassigned_count INTEGER;
+    total_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO unassigned_count FROM activity WHERE assigned_to IS NULL;
+    SELECT COUNT(*) INTO total_count FROM activity;
+    
+    RAISE NOTICE 'Migration completed. Total activities: %, Unassigned: %', total_count, unassigned_count;
+    
+    IF unassigned_count > 0 THEN
+        RAISE WARNING 'Still have % activities without assigned_to!', unassigned_count;
+    END IF;
+END $$;
 
-CREATE TRIGGER customer_activity_tracker
-    AFTER INSERT OR UPDATE ON customer
-    FOR EACH ROW
-    EXECUTE FUNCTION track_customer_changes();
-
--- Useful views for querying activities
-CREATE OR REPLACE VIEW v_tasks AS
-SELECT * FROM activity 
-WHERE status IN ('pending', 'in_progress') 
-ORDER BY due_date ASC NULLS LAST, priority DESC;
-
-CREATE OR REPLACE VIEW v_completed_activities AS
-SELECT * FROM activity 
-WHERE status = 'completed'
-ORDER BY date_created DESC;
-
-CREATE OR REPLACE VIEW v_overdue_tasks AS
-SELECT * FROM activity 
-WHERE status IN ('pending', 'in_progress') 
-AND due_date < CURRENT_TIMESTAMP
-ORDER BY due_date ASC;
-
-CREATE OR REPLACE VIEW v_system_activities AS
-SELECT * FROM activity WHERE activity_category = 'system';
-
-CREATE OR REPLACE VIEW v_manual_activities AS
-SELECT * FROM activity WHERE activity_category = 'manual';
-
-
+COMMIT; 
