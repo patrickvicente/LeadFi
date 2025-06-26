@@ -4,8 +4,10 @@ import Filter from "../components/common/Filter";
 import CustomerList from "../components/customers/CustomerList";
 import CustomerForm from "../components/customers/CustomerForm";
 import CustomerDetailsModal from "../components/customers/CustomerDetailsModal";
+import Toast from "../components/common/Toast";
 import { customerApi } from "../services/api";
 import { useServerSorting } from "../utils/useServerSorting";
+import { useToast } from "../hooks/useToast";
 
 const Customers = () => {
     const navigate = useNavigate();
@@ -16,6 +18,7 @@ const Customers = () => {
     const [customerDetailsLoading, setCustomerDetailsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const { toast, showToast, hideToast } = useToast();
     const [filters, setFilters] = useState({
         search: "",
         status: "all",
@@ -176,6 +179,11 @@ const Customers = () => {
       setIsFormOpen(true);
     };
 
+    const handleCreateLead = () => {
+      // Navigate to leads page to create a new lead first
+      navigate('/leads?action=create');
+    };
+
     const handleEditCustomer = async (customerData) => {
       try {
         const response = await customerApi.updateCustomer(customerData.customer_uid || customerData.customer_id, customerData);
@@ -192,6 +200,7 @@ const Customers = () => {
           setSelectedCustomer({ ...selectedCustomer, ...response });
         }
 
+        showToast('Customer updated successfully!', 'success');
         console.log('Customer updated successfully');
       } catch (err) {
         console.error('Error updating customer:', err);
@@ -212,18 +221,24 @@ const Customers = () => {
           // Close modal if the deleted customer was selected
           if (selectedCustomer && (selectedCustomer.customer_uid || selectedCustomer.customer_id) === customerId) {
             setSelectedCustomer(null);
+            searchParams.delete('customer_uid');
+            setSearchParams(searchParams);
           }
 
+          showToast('Customer deleted successfully!', 'success');
           console.log('Customer deleted successfully');
         } catch (err) {
           console.error('Error deleting customer:', err);
-          alert('Failed to delete customer. Please try again.');
+          showToast('Failed to delete customer', 'error');
         }
       }
     };
 
     const handleFormSubmit = async (customerData) => {
       try {
+        // Note: The CustomerForm now handles lead conversion internally
+        // It calls leadApi.convertLead() instead of customerApi.createCustomer()
+        // This function is kept for editing existing customers
         const response = await customerApi.createCustomer(customerData);
         
         // Add the new customer to the local state
@@ -235,6 +250,12 @@ const Customers = () => {
         console.error('Error creating customer:', err);
         throw err; // Re-throw to let the form handle the error
       }
+    };
+
+    const handleCustomerCreated = () => {
+      // Callback for when customer is successfully created from lead
+      setIsFormOpen(false);
+      fetchCustomers(); // Refresh the customer list
     };
 
     const handleCloseModal = () => {
@@ -351,8 +372,17 @@ const Customers = () => {
           <CustomerForm
             onClose={handleCloseForm}
             onSubmit={handleFormSubmit}
+            onCreateLead={handleCreateLead}
           />
         )}
+
+        {/* Toast Notification */}
+        <Toast
+          message={toast.message}
+          isVisible={toast.isVisible}
+          onClose={hideToast}
+          type={toast.type}
+        />
       </div>
     );
   };

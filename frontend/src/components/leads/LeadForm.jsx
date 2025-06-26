@@ -295,15 +295,7 @@ const LeadForm = ({ lead, onClose, onSubmit }) => {
             </div>
 
             {/* Form Actions */}
-            <div className="flex justify-end space-x-4 mt-6 pt-4 border-t border-gray-700">
-              <button
-                type="button"
-                onClick={onClose}
-                className="bg-gray-600 text-text px-4 py-2 rounded hover:bg-gray-700 transition-colors"
-                disabled={isSubmitting}
-              >
-                Cancel
-              </button>
+            <div className="flex justify-end mt-6 pt-4 border-t border-gray-700">
               <button
                 type="submit"
                 className="bg-highlight1 text-white px-4 py-2 rounded hover:bg-highlight1/80 transition-colors disabled:opacity-50"

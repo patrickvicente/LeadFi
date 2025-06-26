@@ -59,7 +59,24 @@ const LeadDetailsModal = ({ lead, loading = false, onClose, onEdit, onDelete, on
     }
 
     try {
-      await onSubmit(formData);
+      // Filter out read-only/computed fields that shouldn't be sent to API
+      const updatePayload = {
+        full_name: formData.full_name,
+        title: formData.title,
+        email: formData.email,
+        telegram: formData.telegram,
+        phone_number: formData.phone_number,
+        linkedin_url: formData.linkedin_url,
+        company_name: formData.company_name,
+        country: formData.country,
+        status: formData.status,
+        source: formData.source,
+        type: formData.type,
+        bd_in_charge: formData.bd_in_charge,
+        background: formData.background
+      };
+
+      await onSubmit(updatePayload);
       setIsEditMode(false);
       setErrors({});
     } catch (err) {
@@ -99,13 +116,10 @@ const LeadDetailsModal = ({ lead, loading = false, onClose, onEdit, onDelete, on
                       actions={{
                         onEdit: handleEditClick,
                         onDelete: () => onDelete(lead.lead_id),
-                        onConvert: () => onConvert(lead),
                         showEdit: true,
                         showDelete: true,
-                        showConvert: !!onConvert,
                         editTitle: "Edit Lead",
-                        deleteTitle: "Delete Lead",
-                        convertTitle: "Convert to Customer"
+                        deleteTitle: "Delete Lead"
                       }}
                     />
                   ) : (
@@ -122,6 +136,9 @@ const LeadDetailsModal = ({ lead, loading = false, onClose, onEdit, onDelete, on
                   )}
                 </>
               )}
+              
+
+              
               <IconButton
                 icon={XMarkIcon}
                 onClick={onClose}
@@ -386,16 +403,20 @@ const LeadDetailsModal = ({ lead, loading = false, onClose, onEdit, onDelete, on
                 </>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-4 mt-6">
-                <button
-                  onClick={onClose}
-                  className="bg-gray-600 text-text px-4 py-2 rounded hover:bg-gray-700 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
             </>
+          )}
+
+          {/* Convert to Customer Button - Show at bottom if lead is not converted and not in edit mode */}
+          {!loading && lead && !isEditMode && !lead.is_converted && onConvert && (
+            <div className="flex justify-end mt-6 pt-4 border-t border-gray-700">
+              <button
+                onClick={() => onConvert(lead)}
+                className="bg-highlight1 text-white px-4 py-2 rounded hover:bg-highlight1/80 transition-colors"
+                title="Convert this lead to a customer"
+              >
+                Convert to Customer
+              </button>
+            </div>
           )}
         </div>
       </div>

@@ -104,10 +104,11 @@ export const leadApi = {
   // Convert a lead to a customer
   convertLead: async (leadId, customerData) => {
     try {
-      const response = await api.post(`/leads/${leadId}/convert`, customerData);
+      const response = await api.post(`/leads/${leadId}`, customerData);
       return response.data;
     } catch (error) {
-      throw new Error('Failed to convert lead');
+      console.error('Error converting lead:', error);
+      throw new Error(error.response?.data?.message || 'Failed to convert lead');
     }
   }
 };

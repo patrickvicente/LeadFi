@@ -29,6 +29,7 @@ class LeadResource(Resource):
             per_page = request.args.get('per_page', 10, type=int) # Items per page (default 10)
             status = request.args.get('status')                  # Optional filter by status
             source = request.args.get('source')                  # Optional filter by source
+            is_converted = request.args.get('is_converted')       # Optional filter by conversion status
             
             # Sorting parameters
             sort_by = request.args.get('sort_by')                # Field to sort by
@@ -41,6 +42,12 @@ class LeadResource(Resource):
                 query = query.filter(Lead.status == status)
             if source:
                 query = query.filter(Lead.source == source)
+            if is_converted is not None:
+                # Convert string 'true'/'false' to boolean
+                if is_converted.lower() == 'true':
+                    query = query.filter(Lead.is_converted == True)
+                elif is_converted.lower() == 'false':
+                    query = query.filter(Lead.is_converted == False)
 
             # Apply sorting if requested
             if sort_by:

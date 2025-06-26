@@ -4,8 +4,11 @@ import Filter from '../components/common/Filter';
 import LeadList from '../components/leads/LeadList';
 import LeadForm from '../components/leads/LeadForm';
 import LeadDetailsModal from '../components/leads/LeadDetailsModal';
+import CustomerForm from '../components/customers/CustomerForm';
+import Toast from '../components/common/Toast';
 import { leadApi } from '../services/api';
 import { useServerSorting } from '../utils/useServerSorting';
+import { useToast } from '../hooks/useToast';
 
 const Leads = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -16,6 +19,9 @@ const Leads = () => {
   const [error, setError] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
+  const [isCustomerFormOpen, setIsCustomerFormOpen] = useState(false);
+  const [leadToConvert, setLeadToConvert] = useState(null);
+  const { toast, showToast, hideToast } = useToast();
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
@@ -38,11 +44,20 @@ const Leads = () => {
     fetchLeads(1, pagination.perPage, sortField, sortDirection);
   });
 
-  // Check for lead_id in URL parameters and fetch that lead
+  // Check for URL parameters
   useEffect(() => {
     const leadId = searchParams.get('lead_id');
+    const action = searchParams.get('action');
+    
     if (leadId) {
       fetchLeadDetails(leadId);
+    }
+    
+    if (action === 'create') {
+      setIsFormOpen(true);
+      // Remove action parameter after opening form
+      searchParams.delete('action');
+      setSearchParams(searchParams);
     }
   }, [searchParams]);
 
@@ -171,9 +186,40 @@ const Leads = () => {
   };
 
   const handleConvertToCustomer = (lead) => {
-    // Handle conversion to customer
-    // You might want to open a customer form here
-    console.log('Converting lead to customer:', lead);
+    setLeadToConvert(lead);
+    setIsCustomerFormOpen(true);
+  };
+
+  const handleCustomerFormClose = () => {
+    setIsCustomerFormOpen(false);
+    setLeadToConvert(null);
+  };
+
+  const handleCustomerConversion = async (customerData) => {
+    try {
+      await leadApi.convertLead(leadToConvert.lead_id, customerData);
+      
+      // Update the lead in the local state to reflect conversion
+      setLeads(prev => prev.map(lead => 
+        lead.lead_id === leadToConvert.lead_id 
+          ? { ...lead, is_converted: true }
+          : lead
+      ));
+      
+      // Update selectedLeadDetails if it's the same lead
+      if (selectedLeadDetails && selectedLeadDetails.lead_id === leadToConvert.lead_id) {
+        setSelectedLeadDetails(prev => ({ ...prev, is_converted: true }));
+      }
+      
+      // Close the customer form
+      handleCustomerFormClose();
+      
+      showToast('Lead successfully converted to customer!', 'success');
+      console.log('Lead successfully converted to customer');
+    } catch (err) {
+      console.error('Error converting lead to customer:', err);
+      throw err; // Re-throw to let the form handle the error
+    }
   };
 
   // Handle lead actions
@@ -196,8 +242,17 @@ const Leads = () => {
     try {
       await leadApi.deleteLead(leadId);
       fetchLeads(); // Refresh leads after deletion
+      showToast('Lead deleted successfully!', 'success');
+      
+      // Close the details modal if the deleted lead was being viewed
+      if (selectedLeadDetails && selectedLeadDetails.lead_id === leadId) {
+        setSelectedLeadDetails(null);
+        searchParams.delete('lead_id');
+        setSearchParams(searchParams);
+      }
     } catch (err) {
       setError('Failed to delete lead');
+      showToast('Failed to delete lead', 'error');
       console.error('Error deleting lead:', err);
     }
   };
@@ -206,8 +261,10 @@ const Leads = () => {
     try {
       if (selectedLead) {
         await leadApi.updateLead(selectedLead.lead_id, formData);
+        showToast('Lead updated successfully!', 'success');
       } else {
         await leadApi.createLead(formData);
+        showToast('Lead created successfully!', 'success');
       }
       handleCloseForm();
       fetchLeads(); // Refresh leads after submission
@@ -221,6 +278,10 @@ const Leads = () => {
     try {
       await leadApi.updateLead(selectedLeadDetails.lead_id, formData);
       fetchLeads(); // Refresh leads after submission
+      showToast('Lead updated successfully!', 'success');
+      
+      // Update the selectedLeadDetails with the new data
+      setSelectedLeadDetails(prev => ({ ...prev, ...formData }));
     } catch (err) {
       console.error('Error updating lead:', err);
       throw err; // Re-throw the error to be handled by the form
@@ -326,6 +387,24 @@ const Leads = () => {
           onConvert={handleConvertToCustomer}
         />
       )}
+
+      {/* Customer Conversion Form */}
+      {isCustomerFormOpen && leadToConvert && (
+        <CustomerForm
+          onClose={handleCustomerFormClose}
+          onSubmit={handleCustomerConversion}
+          customer={null} // Always creating new customer from lead
+          leadToConvert={leadToConvert} // Pass the lead to convert
+        />
+      )}
+
+      {/* Toast Notification */}
+      <Toast
+        message={toast.message}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+        type={toast.type}
+      />
     </div>
   );
 };
