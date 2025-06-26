@@ -73,10 +73,83 @@ export const customerOptions = {
 
 // Activity related options
 export const activityOptions = {
-  activityType: [
-    // Add  activity types
+  // Manual BD Activity Types
+  manualActivityTypes: [
+    'call',
+    'email', 
+    'meeting',
+    'linkedin_message',
+    'telegram_message',
+    'follow_up',
+    'proposal_sent',
+    'demo',
+    'negotiation',
+    'onboarding'
   ],
-  // Add more activity-specific options
+  
+  // System Activity Types (admin/automated)
+  systemActivityTypes: [
+    'lead_created',
+    'lead_updated', 
+    'lead_deleted',
+    'lead_converted',
+    'customer_created',
+    'customer_updated',
+    'customer_deleted',
+    'status_changed',
+    'stage_changed',
+    'assignment_changed'
+  ],
+  
+  // Automated Activity Types
+  automatedActivityTypes: [
+    'email_opened',
+    'email_clicked',
+    'document_viewed',
+    'trading_activity',
+    'account_milestone'
+  ],
+  
+  // Activity Categories
+  activityCategories: [
+    { value: 'manual', label: 'Manual (BD)' },
+    { value: 'system', label: 'System' },
+    { value: 'automated', label: 'Automated' }
+  ],
+  
+  // Combined activity types for dropdowns
+  allActivityTypes: [
+    // Manual activities
+    { value: 'call', label: 'Call', category: 'manual' },
+    { value: 'email', label: 'Email', category: 'manual' },
+    { value: 'meeting', label: 'Meeting', category: 'manual' },
+    { value: 'linkedin_message', label: 'LinkedIn Message', category: 'manual' },
+    { value: 'telegram_message', label: 'Telegram Message', category: 'manual' },
+    { value: 'follow_up', label: 'Follow Up', category: 'manual' },
+    { value: 'proposal_sent', label: 'Proposal Sent', category: 'manual' },
+    { value: 'demo', label: 'Demo', category: 'manual' },
+    { value: 'negotiation', label: 'Negotiation', category: 'manual' },
+    { value: 'onboarding', label: 'Onboarding', category: 'manual' },
+    
+    // System activities
+    { value: 'lead_created', label: 'Lead Created', category: 'system' },
+    { value: 'lead_updated', label: 'Lead Updated', category: 'system' },
+    { value: 'lead_deleted', label: 'Lead Deleted', category: 'system' },
+    { value: 'lead_converted', label: 'Lead Converted', category: 'system' },
+    { value: 'customer_created', label: 'Customer Created', category: 'system' },
+    { value: 'customer_updated', label: 'Customer Updated', category: 'system' },
+    { value: 'customer_deleted', label: 'Customer Deleted', category: 'system' },
+    { value: 'status_changed', label: 'Status Changed', category: 'system' },
+    { value: 'stage_changed', label: 'Stage Changed', category: 'system' },
+    { value: 'assignment_changed', label: 'Assignment Changed', category: 'system' },
+    
+    // Automated activities
+    { value: 'email_opened', label: 'Email Opened', category: 'automated' },
+    { value: 'email_clicked', label: 'Email Clicked', category: 'automated' },
+    { value: 'document_viewed', label: 'Document Viewed', category: 'automated' },
+    { value: 'trading_activity', label: 'Trading Activity', category: 'automated' },
+    { value: 'account_milestone', label: 'Account Milestone', category: 'automated' }
+  ]
 };
 
 // Trading related options

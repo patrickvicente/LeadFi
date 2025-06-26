@@ -163,6 +163,7 @@ export const customerApi = {
 
 // Activity API calls
 export const activityApi = {
+  // Get all activities with filtering and pagination
   getActivities: async (filters = {}) => {
     try {
       const response = await api.get('/activities', { params: filters });
@@ -172,12 +173,87 @@ export const activityApi = {
     }
   },
 
+  // Get a single activity
+  getActivity: async (activityId) => {
+    try {
+      const response = await api.get(`/activities/${activityId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch activity');
+    }
+  },
+
+  // Create a new manual activity
   createActivity: async (activityData) => {
     try {
       const response = await api.post('/activities', activityData);
       return response.data;
     } catch (error) {
       throw new Error('Failed to create activity');
+    }
+  },
+
+  // Update an existing activity
+  updateActivity: async (activityId, activityData) => {
+    try {
+      const response = await api.put(`/activities/${activityId}`, activityData);
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to update activity');
+    }
+  },
+
+  // Delete an activity
+  deleteActivity: async (activityId) => {
+    try {
+      const response = await api.delete(`/activities/${activityId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to delete activity');
+    }
+  },
+
+  // Get activity timeline for lead/customer
+  getTimeline: async (filters = {}) => {
+    try {
+      const response = await api.get('/activities/timeline', { params: filters });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch activity timeline');
+    }
+  },
+
+  // Get activity statistics
+  getStats: async () => {
+    try {
+      const response = await api.get('/activities/stats');
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch activity statistics');
+    }
+  },
+
+  // Get activities for a specific lead
+  getLeadActivities: async (leadId, filters = {}) => {
+    try {
+      const response = await api.get('/activities', { 
+        params: { ...filters, lead_id: leadId } 
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch lead activities');
+    }
+  },
+
+  // Get activities for a specific customer
+  getCustomerActivities: async (customerUid, filters = {}) => {
+    try {
+      const response = await api.get('/activities', { 
+        params: { ...filters, customer_uid: customerUid } 
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch customer activities');
     }
   }
 };
