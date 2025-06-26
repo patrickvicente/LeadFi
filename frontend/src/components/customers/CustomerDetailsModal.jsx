@@ -5,6 +5,7 @@ import { optionHelpers } from '../../config/options';
 import { validateForm } from '../../utils/formValidation';
 import ActionButtons from '../common/ActionButtons';
 import IconButton from '../common/IconButton';
+import FormSelect from '../common/FormSelect';
 
 const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDelete, onSubmit, onViewLead }) => {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -13,9 +14,7 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
 
   const validationRules = {
     required: ['name', 'customer_uid', 'type'],
-    email: ['registered_email'],
-    phone: ['phone_number'],
-    url: ['linkedin_url']
+    email: ['registered_email']
   };
 
   useEffect(() => {
@@ -60,7 +59,18 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
     }
 
     try {
-      await onSubmit(formData);
+      // Only send fields that are valid for customer updates
+      const customerUpdateData = {
+        customer_uid: formData.customer_uid,
+        name: formData.name,
+        registered_email: formData.registered_email,
+        type: formData.type,
+        country: formData.country,
+        is_closed: formData.is_closed,
+        date_closed: formData.date_closed
+      };
+
+      await onSubmit(customerUpdateData);
       setIsEditMode(false);
       setErrors({});
     } catch (err) {
@@ -207,13 +217,10 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
                         type="text"
                         name="customer_uid"
                         value={formData.customer_uid || ''}
-                        onChange={handleChange}
-                        className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
-                          errors.customer_uid ? 'border-highlight2' : ''
-                        }`}
-                        required
+                        className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-gray-400 shadow-sm cursor-not-allowed"
+                        disabled
+                        readOnly
                       />
-                      {renderError('customer_uid')}
                     </div>
 
                     {/* Contact Information */}
@@ -232,20 +239,6 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-text">Phone Number</label>
-                      <input
-                        type="tel"
-                        name="phone_number"
-                        value={formData.phone_number || ''}
-                        onChange={handleChange}
-                        className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
-                          errors.phone_number ? 'border-highlight2' : ''
-                        }`}
-                      />
-                      {renderError('phone_number')}
-                    </div>
-
-                    <div>
                       <label className="block text-sm font-medium text-text">Country</label>
                       <input
                         type="text"
@@ -257,34 +250,26 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-text">Type *</label>
-                      <select
+                      <FormSelect
                         name="type"
+                        label="Type"
                         value={formData.type || ''}
                         onChange={handleChange}
-                        className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
-                          errors.type ? 'border-highlight2' : ''
-                        }`}
+                        type="customer"
+                        error={errors.type}
                         required
-                      >
-                        <option value="">Select Type</option>
-                        {optionHelpers.getOptions('type', 'customer').map(option => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      {renderError('type')}
+                        placeholder="Select Type"
+                      />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-text">BD in Charge</label>
                       <input
                         type="text"
-                        name="bd_in_charge"
-                        value={formData.bd_in_charge || ''}
-                        onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1"
+                        value={formData.bd_in_charge || 'Unassigned'}
+                        className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-gray-400 shadow-sm cursor-not-allowed"
+                        disabled
+                        readOnly
                       />
                     </div>
 
@@ -301,17 +286,6 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
                       </label>
                     </div>
 
-                    {/* Additional Information */}
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-text">Notes</label>
-                      <textarea
-                        name="notes"
-                        value={formData.notes || ''}
-                        onChange={handleChange}
-                        rows="3"
-                        className="mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1"
-                      />
-                    </div>
                   </div>
                 </form>
               ) : (
@@ -350,16 +324,6 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
                       </div>
                     </div>
                   </div>
-
-                  {/* Notes */}
-                  {customer.notes && (
-                    <div className="mb-8">
-                      <h3 className="text-lg font-semibold mb-4 text-text">Notes</h3>
-                      <div className="bg-gray-800 rounded-lg p-4">
-                        <p className="text-text whitespace-pre-wrap">{customer.notes}</p>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Background Information from Related Leads */}
                   {customer.related_leads && customer.related_leads.length > 0 && customer.related_leads[0].background && (

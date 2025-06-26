@@ -4,7 +4,15 @@ export const validateForm = (formData, validationRules) => {
     // Required fields
     if (validationRules.required) {
       validationRules.required.forEach(field => {
-        if (!formData[field] || formData[field].trim() === '') {
+        const value = formData[field];
+        // Check if field is empty, handling both strings and other types
+        const isEmpty = value === null || 
+                       value === undefined || 
+                       (typeof value === 'string' && value.trim() === '') ||
+                       (typeof value === 'number' && isNaN(value)) ||
+                       (Array.isArray(value) && value.length === 0);
+        
+        if (isEmpty) {
           errors[field] = `${field.replace('_', ' ')} is required`;
         }
       });

@@ -189,16 +189,7 @@ const CustomerForm = ({ onClose, onSubmit, customer = null }) => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-text">BD in Charge</label>
-                <input
-                  type="text"
-                  name="bd_in_charge"
-                  value={formData.bd_in_charge}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1"
-                />
-              </div>
+
 
               <div className="flex items-center">
                 <input
@@ -213,18 +204,7 @@ const CustomerForm = ({ onClose, onSubmit, customer = null }) => {
                 </label>
               </div>
 
-              {/* Additional Information */}
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-text">Notes</label>
-                <textarea
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleChange}
-                  rows="3"
-                  className="mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1"
-                  placeholder="Add any additional notes about this customer..."
-                />
-              </div>
+
             </div>
 
             {/* Form Actions */}
