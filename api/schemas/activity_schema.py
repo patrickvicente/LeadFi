@@ -20,10 +20,18 @@ class ActivitySchema(Schema):
     date_completed = fields.DateTime(dump_only=True)
     
     # Additional computed fields for frontend
-    related_entity_name = fields.Str(dump_only=True)
-    related_entity_type = fields.Str(dump_only=True)
+    related_entity_name = fields.Method('get_related_entity_name', dump_only=True)
+    related_entity_type = fields.Method('get_related_entity_type', dump_only=True)
     is_overdue = fields.Method('get_is_overdue', dump_only=True)
     is_task = fields.Method('get_is_task', dump_only=True)
+    
+    def get_related_entity_name(self, obj):
+        """Get the related entity name by calling the model method"""
+        return obj.get_related_entity_name()
+    
+    def get_related_entity_type(self, obj):
+        """Get the related entity type by calling the model method"""
+        return obj.get_related_entity_type()
     
     def get_is_overdue(self, obj):
         """Get the is_overdue status by calling the model method"""

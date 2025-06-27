@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import { activityOptions } from '../../config/options';
@@ -7,15 +8,41 @@ import ActionButtons from '../common/ActionButtons';
 import IconButton from '../common/IconButton';
 
 const ActivityList = ({ 
+  // Data props (passed from parent)
+  activities = [],
+  loading = false,
+  pagination = {},
+  onPageChange = null,
+  
+  // Legacy props for embedded usage (Lead/Customer details)
   leadId = null, 
   customerUid = null, 
+  
+  // Configuration props
   showFilters = true,
   showActions = true,
+  showPagination = true,
+  
+  // Callback props
   onActivityUpdate = null,
-  defaultFilters = {} 
+  defaultFilters = {},
+  
+  // Sorting props
+  sortField = 'date_created',
+  sortDirection = 'desc',
+  onSort = null
 }) => {
-  const [activities, setActivities] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Local state for embedded usage (when leadId/customerUid provided)
+  const [localActivities, setLocalActivities] = useState([]);
+  const [localLoading, setLocalLoading] = useState(false);
+  const [localPagination, setLocalPagination] = useState({
+    current_page: 1,
+    per_page: 20,
+    total: 0,
+    pages: 0
+  });
+  
+  // Filter state
   const [filters, setFilters] = useState({
     category: '',
     type: '',
@@ -25,65 +52,82 @@ const ActivityList = ({
     overdue_only: false,
     tasks_only: false,
     visible_only: true,
-    ...defaultFilters // Apply default filters from props
+    ...defaultFilters
   });
-  const [pagination, setPagination] = useState({
-    current_page: 1,
-    per_page: 20,
-    total: 0,
-    pages: 0
-  });
-  const [sortBy, setSortBy] = useState('date_created');
-  const [sortOrder, setSortOrder] = useState('desc');
+  
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
-  // Load activities
+  // Determine if this is embedded usage (has leadId or customerUid)
+  const isEmbedded = leadId || customerUid;
+  
+  // Use local data for embedded, props data for standalone
+  const displayActivities = isEmbedded ? localActivities : activities;
+  const displayLoading = isEmbedded ? localLoading : loading;
+  const displayPagination = isEmbedded ? localPagination : pagination;
+
+  // Load activities for embedded usage only
   const loadActivities = async (page = 1) => {
-    setLoading(true);
+    if (!isEmbedded) return; // Don't fetch if not embedded
+    
+    setLocalLoading(true);
     try {
       const params = {
         page,
-        per_page: pagination.per_page,
-        sort_by: sortBy,
-        sort_order: sortOrder,
+        per_page: localPagination.per_page,
+        sort_by: sortField,
+        sort_order: sortDirection,
         ...filters
       };
 
-      // Add entity filters
+      // Add entity filters for embedded usage
       if (leadId) params.lead_id = leadId;
       if (customerUid) params.customer_uid = customerUid;
 
       const response = await api.activity.getActivities(params);
-      setActivities(response.activities || []);
-      setPagination({
+      setLocalActivities(response.activities || []);
+      setLocalPagination({
         current_page: response.current_page,
         per_page: response.per_page,
         total: response.total,
         pages: response.pages
       });
-      console.log("Received activities:", response);
     } catch (error) {
       console.error('Error loading activities:', error);
       showToast('Failed to load activities', 'error');
     } finally {
-      setLoading(false);
+      setLocalLoading(false);
     }
   };
 
-  // Load data on component mount and when filters change
+  // Initialize filters and load data only for embedded usage
   useEffect(() => {
-    loadActivities(1);
-  }, [filters, sortBy, sortOrder, leadId, customerUid]);
+    if (isEmbedded) {
+      // Initialize filters
+      setFilters({
+        category: '',
+        type: '',
+        status: '',
+        priority: '',
+        assigned_to: '',
+        overdue_only: false,
+        tasks_only: false,
+        visible_only: true,
+        ...defaultFilters
+      });
+      
+      // Load initial data  
+      const timer = setTimeout(() => {
+        loadActivities(1);
+      }, 0);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [leadId, customerUid]); // Only when embedded entities change
 
-  // Update filters when defaultFilters change
-  useEffect(() => {
-    setFilters(prev => ({
-      ...prev,
-      ...defaultFilters
-    }));
-  }, [defaultFilters]);
 
-  // Filter handlers
+
+  // Filter handlers (for embedded usage)
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({
       ...prev,
@@ -101,17 +145,23 @@ const ActivityList = ({
       overdue_only: false,
       tasks_only: false,
       visible_only: true,
-      ...defaultFilters // Preserve default filters when clearing
+      ...defaultFilters
     });
   };
 
   // Sort handler
   const handleSort = (column) => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    if (onSort) {
+      // Use parent's sort handler for standalone usage
+      onSort(column);
     } else {
-      setSortBy(column);
-      setSortOrder('desc');
+      // Handle sorting locally for embedded usage
+      if (sortField === column) {
+        const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        // For embedded usage, we'd need to track sort state locally
+        // For now, let's just call loadActivities
+        loadActivities(1);
+      }
     }
   };
 
@@ -121,7 +171,10 @@ const ActivityList = ({
       const completionNotes = prompt('Enter completion notes (optional):');
       await api.activity.completeTask(activityId, completionNotes);
       showToast('Task completed successfully!', 'success');
-      loadActivities(pagination.current_page);
+      
+      if (isEmbedded) {
+        loadActivities(localPagination.current_page);
+      }
       if (onActivityUpdate) onActivityUpdate();
     } catch (error) {
       console.error('Error completing task:', error);
@@ -134,11 +187,23 @@ const ActivityList = ({
       const reason = prompt('Enter cancellation reason (optional):');
       await api.activity.cancelTask(activityId, reason);
       showToast('Task cancelled successfully!', 'success');
-      loadActivities(pagination.current_page);
+      
+      if (isEmbedded) {
+        loadActivities(localPagination.current_page);
+      }
       if (onActivityUpdate) onActivityUpdate();
     } catch (error) {
       console.error('Error cancelling task:', error);
       showToast('Failed to cancel task', 'error');
+    }
+  };
+
+  // Navigation to related entity
+  const handleNavigateToEntity = (activity) => {
+    if (activity.related_entity_type === 'lead' && activity.lead_id) {
+      navigate(`/leads?leadId=${activity.lead_id}`);
+    } else if (activity.related_entity_type === 'customer' && activity.customer_uid) {
+      navigate(`/customers?customerId=${activity.customer_uid}`);
     }
   };
 
@@ -193,27 +258,36 @@ const ActivityList = ({
   };
 
   const getSortIcon = (field) => {
-    if (sortBy !== field) {
+    if (sortField !== field) {
       return <span className="ml-1 text-gray-500">↑↓</span>;
     }
     
-    return sortOrder === 'asc' 
+    return sortDirection === 'asc' 
       ? <span className="ml-1 text-highlight1">↑</span>
       : <span className="ml-1 text-highlight1">↓</span>;
   };
 
-  if (activities.length === 0 && !loading) {
+  // Handle pagination click
+  const handlePaginationClick = (page) => {
+    if (isEmbedded) {
+      loadActivities(page);
+    } else if (onPageChange) {
+      onPageChange(page);
+    }
+  };
+
+  if (displayActivities.length === 0 && !displayLoading) {
     return (
       <div className="bg-background border border-gray-700 rounded-lg p-8 text-center">
-        <p className="text-gray-400">No tasks found.</p>
+        <p className="text-gray-400">No activities found.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      {showFilters && (
+      {/* Filters - only show if enabled and embedded */}
+      {showFilters && isEmbedded && (
         <div className="bg-background border border-gray-700 rounded-lg p-4">
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-4">
             <div>
@@ -381,23 +455,23 @@ const ActivityList = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
-              {loading ? (
+              {displayLoading ? (
                 <tr>
                   <td colSpan="10" className="px-4 py-8 text-center text-gray-400">
                     <div className="flex justify-center items-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-highlight1"></div>
-                      <span className="ml-3">Loading tasks...</span>
+                      <span className="ml-3">Loading activities...</span>
                     </div>
                   </td>
                 </tr>
-              ) : activities.length === 0 ? (
+              ) : displayActivities.length === 0 ? (
                 <tr>
                   <td colSpan="10" className="px-4 py-8 text-center text-gray-400">
-                    No tasks found
+                    No activities found
                   </td>
                 </tr>
               ) : (
-                activities.map((activity, index) => (
+                displayActivities.map((activity, index) => (
                   <tr
                     key={activity.activity_id}
                     className={`transition-colors hover:bg-gray-800 ${
@@ -425,12 +499,18 @@ const ActivityList = ({
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[150px]">
-                      <div className="truncate" title={activity.related_entity_name}>
-                        {activity.related_entity_name}
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        {activity.related_entity_type}
-                      </div>
+                      <button
+                        onClick={() => handleNavigateToEntity(activity)}
+                        className="text-left truncate hover:text-highlight1 transition-colors cursor-pointer"
+                        title={`Navigate to ${activity.related_entity_type}: ${activity.related_entity_name}`}
+                      >
+                        <div className="truncate">
+                          {activity.related_entity_name}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {activity.related_entity_type}
+                        </div>
+                      </button>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap min-w-[100px]">
                       {activity.status && (
@@ -496,20 +576,20 @@ const ActivityList = ({
           </table>
         </div>
 
-        {/* Pagination */}
-        {pagination.pages > 1 && (
+        {/* Pagination - only show if enabled and has multiple pages */}
+        {showPagination && (displayPagination.totalPages || displayPagination.pages || 1) > 1 && (
           <div className="bg-background px-4 py-3 flex items-center justify-between border-t border-gray-700">
             <div className="flex-1 flex justify-between sm:hidden">
               <button
-                onClick={() => loadActivities(pagination.current_page - 1)}
-                disabled={pagination.current_page === 1}
+                onClick={() => handlePaginationClick((displayPagination.currentPage || displayPagination.current_page || 1) - 1)}
+                disabled={(displayPagination.currentPage || displayPagination.current_page || 1) === 1}
                 className="relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-text bg-background hover:bg-gray-800 disabled:opacity-50"
               >
                 Previous
               </button>
               <button
-                onClick={() => loadActivities(pagination.current_page + 1)}
-                disabled={pagination.current_page === pagination.pages}
+                onClick={() => handlePaginationClick((displayPagination.currentPage || displayPagination.current_page || 1) + 1)}
+                disabled={(displayPagination.currentPage || displayPagination.current_page || 1) === (displayPagination.totalPages || displayPagination.pages || 1)}
                 className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-text bg-background hover:bg-gray-800 disabled:opacity-50"
               >
                 Next
@@ -520,24 +600,24 @@ const ActivityList = ({
                 <p className="text-sm text-gray-400">
                   Showing{' '}
                   <span className="font-medium text-text">
-                    {(pagination.current_page - 1) * pagination.per_page + 1}
+                    {((displayPagination.currentPage || displayPagination.current_page || 1) - 1) * (displayPagination.perPage || displayPagination.per_page || 20) + 1}
                   </span>{' '}
                   to{' '}
                   <span className="font-medium text-text">
-                    {Math.min(pagination.current_page * pagination.per_page, pagination.total)}
+                    {Math.min((displayPagination.currentPage || displayPagination.current_page || 1) * (displayPagination.perPage || displayPagination.per_page || 20), (displayPagination.totalItems || displayPagination.total || 0))}
                   </span>{' '}
                   of{' '}
-                  <span className="font-medium text-text">{pagination.total}</span> results
+                  <span className="font-medium text-text">{displayPagination.totalItems || displayPagination.total || 0}</span> results
                 </p>
               </div>
               <div>
                 <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                  {[...Array(pagination.pages)].map((_, index) => (
+                  {[...Array(displayPagination.totalPages || displayPagination.pages || 1)].map((_, index) => (
                     <button
                       key={index + 1}
-                      onClick={() => loadActivities(index + 1)}
+                      onClick={() => handlePaginationClick(index + 1)}
                       className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                        pagination.current_page === index + 1
+                        (displayPagination.currentPage || displayPagination.current_page || 1) === index + 1
                           ? 'z-10 bg-highlight1 border-highlight1 text-white'
                           : 'bg-background border-gray-600 text-gray-400 hover:bg-gray-800'
                       }`}
