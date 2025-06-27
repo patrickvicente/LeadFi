@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { XMarkIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, EyeIcon, PlusIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 import { formatDateOnly } from '../../utils/dateFormat';
 import { optionHelpers } from '../../config/options';
 import { validateForm } from '../../utils/formValidation';
 import ActionButtons from '../common/ActionButtons';
 import IconButton from '../common/IconButton';
 import FormSelect from '../common/FormSelect';
+import ActivityTaskModal from '../activity/ActivityTaskModal';
 
 const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDelete, onSubmit, onViewLead }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
+  const [showActivityModal, setShowActivityModal] = useState(false);
+  const [activityModalMode, setActivityModalMode] = useState('activity');
 
   const validationRules = {
     required: ['name', 'customer_uid', 'type'],
@@ -125,6 +128,16 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
     if (onViewLead) {
       onViewLead(lead);
     }
+  };
+
+  const handleActivitySuccess = () => {
+    setShowActivityModal(false);
+    // Could refresh customer data here if needed
+  };
+
+  const openActivityModal = (mode = 'activity') => {
+    setActivityModalMode(mode);
+    setShowActivityModal(true);
   };
 
   if (!customer && !loading) return null;
@@ -417,7 +430,27 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
 
                   {/* Latest Activities */}
                   <div className="mb-8">
-                    <h3 className="text-lg font-semibold mb-4 text-text">Latest Activities</h3>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-text">Latest Activities</h3>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openActivityModal('activity')}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-highlight1 text-white rounded-md hover:bg-highlight1/80 transition-colors text-sm"
+                          title="Log Activity"
+                        >
+                          <PlusIcon className="h-4 w-4" />
+                          Activity
+                        </button>
+                        <button
+                          onClick={() => openActivityModal('task')}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-highlight3 text-white rounded-md hover:bg-highlight3/80 transition-colors text-sm"
+                          title="Create Task"
+                        >
+                          <ClipboardDocumentListIcon className="h-4 w-4" />
+                          Task
+                        </button>
+                      </div>
+                    </div>
                     <div className="space-y-4">
                       <p className="text-gray-400">No recent activities</p>
                     </div>
@@ -430,6 +463,18 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
           )}
         </div>
       </div>
+      
+      {/* Activity/Task Modal */}
+      <ActivityTaskModal
+        isOpen={showActivityModal}
+        onClose={() => setShowActivityModal(false)}
+        mode={activityModalMode}
+        prefilledData={{
+          customer_uid: customer?.customer_uid || customer?.customer_id,
+          activity_category: 'manual'
+        }}
+        onSuccess={handleActivitySuccess}
+      />
     </div>
   );
 };

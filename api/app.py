@@ -5,6 +5,14 @@ from flask_sqlalchemy import SQLAlchemy
 from api.resources.lead import LeadResource
 from api.resources.customer import CustomerResource
 from api.resources.contact import ContactResource
+from api.resources.activity import (
+    ActivityResource, 
+    ActivityTimelineResource, 
+    ActivityStatsResource, 
+    TaskResource, 
+    TaskCompleteResource, 
+    TaskCancelResource
+)
 from db.db_config import db, get_db_url
 import os
 
@@ -62,6 +70,16 @@ def create_app():
     api.add_resource(LeadResource, '/api/leads', '/api/leads/<int:id>')
     api.add_resource(CustomerResource, '/api/customers', '/api/customers/<string:customer_uid>')
     api.add_resource(ContactResource, '/api/contacts', '/api/contacts/<int:contact_id>')
+    
+    # Activity resources
+    api.add_resource(ActivityResource, '/api/activities', '/api/activities/<int:activity_id>')
+    api.add_resource(ActivityTimelineResource, '/api/activities/timeline')
+    api.add_resource(ActivityStatsResource, '/api/activities/stats')
+    
+    # Task management resources
+    api.add_resource(TaskResource, '/api/tasks')
+    api.add_resource(TaskCompleteResource, '/api/tasks/<int:task_id>/complete')
+    api.add_resource(TaskCancelResource, '/api/tasks/<int:task_id>/cancel')
     
     return app
 

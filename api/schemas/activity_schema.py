@@ -7,7 +7,7 @@ class ActivitySchema(Schema):
     activity_type = fields.Str(required=True, validate=validate.Length(min=1, max=50))
     activity_category = fields.Str(validate=validate.OneOf(['manual', 'system', 'automated']))
     description = fields.Str(allow_none=True)
-    metadata = fields.Dict(allow_none=True)  # JSON field
+    activity_metadata = fields.Dict(allow_none=True)  # JSON field
     date_created = fields.DateTime(dump_only=True)
     created_by = fields.Str(allow_none=True, validate=validate.Length(max=50))
     is_visible_to_bd = fields.Boolean()
@@ -22,8 +22,16 @@ class ActivitySchema(Schema):
     # Additional computed fields for frontend
     related_entity_name = fields.Str(dump_only=True)
     related_entity_type = fields.Str(dump_only=True)
-    is_overdue = fields.Boolean(dump_only=True)
-    is_task = fields.Boolean(dump_only=True)
+    is_overdue = fields.Method('get_is_overdue', dump_only=True)
+    is_task = fields.Method('get_is_task', dump_only=True)
+    
+    def get_is_overdue(self, obj):
+        """Get the is_overdue status by calling the model method"""
+        return obj.is_overdue()
+    
+    def get_is_task(self, obj):
+        """Get the is_task status by calling the model method"""
+        return obj.is_task()
 
     @validates_schema
     def validate_entity_relationship(self, data, **kwargs):

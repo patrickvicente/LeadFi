@@ -56,7 +56,7 @@ class ActivityResource(Resource):
             if activity_type:
                 query = query.filter(Activity.activity_type == activity_type)
             if visible_only:
-                query = query.filter(Activity.is_visible_to_bd == True)
+                query = query.filter(Activity.is_visible_to_bd.is_(True))
                 
             # Task-specific filters
             if status:
@@ -68,11 +68,14 @@ class ActivityResource(Resource):
             if overdue_only:
                 from datetime import datetime
                 query = query.filter(
-                    Activity.due_date < datetime.utcnow(),
-                    Activity.status.in_(['pending', 'in_progress'])
+                    and_(
+                        Activity.due_date < datetime.utcnow(),
+                        Activity.status.in_([Activity.PENDING, Activity.IN_PROGRESS]),
+                        Activity.due_date.isnot(None)
+                    )
                 )
             if tasks_only:
-                query = query.filter(Activity.status.in_(['pending', 'in_progress']))
+                query = query.filter(Activity.due_date.isnot(None))
 
             # Apply sorting
             if sort_by == 'date_created':
@@ -116,14 +119,27 @@ class ActivityResource(Resource):
             return {'errors': errors}, HTTPStatus.BAD_REQUEST
 
         try:
-            # Create manual activity
-            activity = Activity.create_manual_activity(
-                lead_id=json_data.get('lead_id'),
-                customer_uid=json_data.get('customer_uid'),
-                activity_type=json_data['activity_type'],
-                description=json_data['description'],
-                created_by=json_data.get('created_by')  # Who creates the activity
-            )
+            # Check if this should be a task (has due_date) or activity (immediate)
+            if json_data.get('due_date'):
+                # Create as task - will remain pending until completed
+                activity = Activity.create_task(
+                    activity_type=json_data['activity_type'],
+                    description=json_data['description'],
+                    due_date=json_data['due_date'],
+                    lead_id=json_data.get('lead_id'),
+                    customer_uid=json_data.get('customer_uid'),
+                    priority=json_data.get('priority', 'medium'),
+                    assigned_to=json_data.get('assigned_to')
+                )
+            else:
+                # Create as activity - completed immediately
+                activity = Activity.create_manual_activity(
+                    lead_id=json_data.get('lead_id'),
+                    customer_uid=json_data.get('customer_uid'),
+                    activity_type=json_data['activity_type'],
+                    description=json_data['description'],
+                    created_by=json_data.get('created_by')
+                )
             
             db.session.commit()
             return {'activity': self.schema.dump(activity)}, HTTPStatus.CREATED

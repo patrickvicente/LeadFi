@@ -35,7 +35,9 @@ CREATE TABLE IF NOT EXISTS "customer" (
   "is_closed" BOOLEAN DEFAULT FALSE,
   "date_closed" timestamp,
   "country" varchar(50),
-  "date_created" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+  "bd_in_charge" varchar(20), -- BD responsible for this customer (copied from primary lead)
+  "date_created" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "date_converted" timestamp -- When lead was converted to customer
 );
 
 -- Contact Table
@@ -85,7 +87,7 @@ CREATE TABLE IF NOT EXISTS "activity" (
   "activity_type" varchar(50) NOT NULL,
   "activity_category" varchar(20) NOT NULL DEFAULT 'manual', -- 'manual', 'system', 'automated'
   "description" text,
-  "metadata" jsonb, -- Structured additional data for system activities
+  "activity_metadata" jsonb, -- Structured additional data for system activities (renamed from metadata)
   "date_created" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "created_by" varchar(50), -- Who/what created the activity
   "is_visible_to_bd" boolean DEFAULT true, -- Visibility control
@@ -95,7 +97,7 @@ CREATE TABLE IF NOT EXISTS "activity" (
   "status" varchar(20) DEFAULT 'completed', -- 'pending', 'in_progress', 'completed', 'cancelled'
   "priority" varchar(10) DEFAULT 'medium', -- 'low', 'medium', 'high'
   "assigned_to" varchar(50), -- Defaults to lead/customer bd_in_charge
-  "date_completed" timestamp,
+  "date_completed" timestamp, -- For activities: same as date_created, for tasks: null until completed
   
   -- Constraints
   CHECK (activity_category IN ('manual', 'system', 'automated')),
@@ -133,6 +135,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Function to set completion date for immediate activities
+CREATE OR REPLACE FUNCTION set_activity_completion()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- For completed activities without due_date (immediate activities), set date_completed = date_created
+    IF NEW.status = 'completed' AND NEW.due_date IS NULL AND NEW.date_completed IS NULL THEN
+        NEW.date_completed = NEW.date_created;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Triggers
 
 -- This trigger sets the timestamp after a specific event occurs.
@@ -148,6 +163,12 @@ BEFORE INSERT
 ON activity
 FOR EACH ROW
 EXECUTE PROCEDURE trigger_set_timestamp();
+
+CREATE TRIGGER set_activity_completion
+BEFORE INSERT OR UPDATE
+ON activity
+FOR EACH ROW
+EXECUTE FUNCTION set_activity_completion();
 
 -- Enhanced Activity System Functions
 
@@ -183,10 +204,12 @@ BEGIN
         activity_type, 
         activity_category,
         description, 
-        metadata,
+        activity_metadata,
         created_by,
         assigned_to,
-        is_visible_to_bd
+        is_visible_to_bd,
+        status,
+        date_completed
     )
     VALUES (
         p_lead_id,
@@ -197,7 +220,9 @@ BEGIN
         p_metadata,
         p_created_by,
         default_assigned_to,
-        true
+        true,
+        'completed',
+        CURRENT_TIMESTAMP
     )
     RETURNING activity_id INTO new_activity_id;
     
@@ -247,7 +272,8 @@ BEGIN
         priority,
         assigned_to,
         created_by,
-        is_visible_to_bd
+        is_visible_to_bd,
+        date_completed
     )
     VALUES (
         p_lead_id,
@@ -260,7 +286,8 @@ BEGIN
         p_priority,
         final_assigned_to,
         final_assigned_to,
-        true
+        true,
+        NULL  -- Tasks start with null completion date
     )
     RETURNING activity_id INTO new_activity_id;
     
@@ -304,7 +331,6 @@ BEGIN
         activity_category,
         description, 
         status,
-        date_completed,
         assigned_to,
         created_by,
         is_visible_to_bd
@@ -316,7 +342,6 @@ BEGIN
         'manual',
         p_description,
         'completed',
-        CURRENT_TIMESTAMP,
         default_assigned_to,
         final_created_by,
         true

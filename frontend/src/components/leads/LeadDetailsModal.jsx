@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PlusIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 import { formatDate } from '../../utils/dateFormat';
 import { optionHelpers } from '../../config/options';
 import { validateForm } from '../../utils/formValidation';
 import ActionButtons from '../common/ActionButtons';
 import IconButton from '../common/IconButton';
+import ActivityTaskModal from '../activity/ActivityTaskModal';
 
 const LeadDetailsModal = ({ lead, loading = false, onClose, onEdit, onDelete, onConvert, onSubmit }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
+  const [showActivityModal, setShowActivityModal] = useState(false);
+  const [activityModalMode, setActivityModalMode] = useState('activity');
 
   const validationRules = {
     required: ['full_name', 'status', 'source', 'type', 'bd_in_charge'],
@@ -85,6 +88,16 @@ const LeadDetailsModal = ({ lead, loading = false, onClose, onEdit, onDelete, on
         submit: err.response?.data?.message || 'Failed to update lead. Please try again.'
       });
     }
+  };
+
+  const handleActivitySuccess = () => {
+    setShowActivityModal(false);
+    // Could refresh lead data here if needed
+  };
+
+  const openActivityModal = (mode = 'activity') => {
+    setActivityModalMode(mode);
+    setShowActivityModal(true);
   };
 
   const renderError = (fieldName) => {
@@ -394,7 +407,27 @@ const LeadDetailsModal = ({ lead, loading = false, onClose, onEdit, onDelete, on
 
                   {/* Latest Activities */}
                   <div className="mb-8">
-                    <h3 className="text-lg font-semibold mb-4 text-text">Latest Activities</h3>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-text">Latest Activities</h3>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openActivityModal('activity')}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-highlight1 text-white rounded-md hover:bg-highlight1/80 transition-colors text-sm"
+                          title="Log Activity"
+                        >
+                          <PlusIcon className="h-4 w-4" />
+                          Activity
+                        </button>
+                        <button
+                          onClick={() => openActivityModal('task')}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-highlight3 text-white rounded-md hover:bg-highlight3/80 transition-colors text-sm"
+                          title="Create Task"
+                        >
+                          <ClipboardDocumentListIcon className="h-4 w-4" />
+                          Task
+                        </button>
+                      </div>
+                    </div>
                     <div className="space-y-4">
                       {/* Add your activities list here */}
                       <p className="text-gray-400">No recent activities</p>
@@ -420,6 +453,18 @@ const LeadDetailsModal = ({ lead, loading = false, onClose, onEdit, onDelete, on
           )}
         </div>
       </div>
+      
+      {/* Activity/Task Modal */}
+      <ActivityTaskModal
+        isOpen={showActivityModal}
+        onClose={() => setShowActivityModal(false)}
+        mode={activityModalMode}
+        prefilledData={{
+          lead_id: lead?.lead_id,
+          activity_category: 'manual'
+        }}
+        onSuccess={handleActivitySuccess}
+      />
     </div>
   );
 };

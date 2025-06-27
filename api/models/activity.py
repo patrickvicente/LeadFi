@@ -11,7 +11,7 @@ class Activity(db.Model):
     activity_type = db.Column(db.String(50), nullable=False)
     activity_category = db.Column(db.String(20), nullable=False, default='manual')
     description = db.Column(db.Text)
-    metadata = db.Column(JSONB)  # JSON field for additional structured data
+    activity_metadata = db.Column(JSONB)  # JSON field for additional structured data
     date_created = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     created_by = db.Column(db.String(50))
     is_visible_to_bd = db.Column(db.Boolean, default=True)
@@ -64,8 +64,8 @@ class Activity(db.Model):
 
     @classmethod
     def create_system_activity(cls, activity_type, description, lead_id=None, customer_uid=None, 
-                              metadata=None, created_by='system'):
-        """Helper method to create system activities"""
+                              activity_metadata=None, created_by='system'):
+        """Helper method to create system activities (completed immediately)"""
         # Get bd_in_charge from lead or customer for assignment
         assigned_to = None
         if lead_id:
@@ -77,16 +77,21 @@ class Activity(db.Model):
             customer = Customer.query.get(customer_uid)
             assigned_to = customer.bd_in_charge if customer else None
             
+        current_time = datetime.utcnow()
+        
         activity = cls(
             lead_id=lead_id,
             customer_uid=customer_uid,
             activity_type=activity_type,
             activity_category=cls.SYSTEM,
             description=description,
-            metadata=metadata,
+            activity_metadata=activity_metadata,
             created_by=created_by,
             assigned_to=assigned_to,
-            is_visible_to_bd=True
+            is_visible_to_bd=True,
+            status=cls.COMPLETED,
+            date_created=current_time,
+            date_completed=current_time  # System activities are completed immediately
         )
         db.session.add(activity)
         return activity
@@ -94,7 +99,7 @@ class Activity(db.Model):
     @classmethod
     def create_manual_activity(cls, lead_id=None, customer_uid=None, activity_type=None,
                               description=None, created_by=None):
-        """Helper method to create manual BD activities"""
+        """Helper method to create manual BD activities (completed immediately)"""
         # Get bd_in_charge from lead or customer for assignment
         assigned_to = None
         if lead_id:
@@ -107,6 +112,7 @@ class Activity(db.Model):
             assigned_to = customer.bd_in_charge if customer else None
             
         final_created_by = created_by or assigned_to
+        current_time = datetime.utcnow()
         
         activity = cls(
             lead_id=lead_id,
@@ -118,7 +124,8 @@ class Activity(db.Model):
             assigned_to=assigned_to,
             is_visible_to_bd=True,
             status=cls.COMPLETED,
-            date_completed=datetime.utcnow()
+            date_created=current_time,
+            date_completed=current_time  # Activities are completed immediately (same as date_created)
         )
         db.session.add(activity)
         return activity
@@ -126,7 +133,7 @@ class Activity(db.Model):
     @classmethod
     def create_task(cls, activity_type, description, due_date, lead_id=None, customer_uid=None,
                    priority='medium', assigned_to=None):
-        """Helper method to create tasks (pending activities)"""
+        """Helper method to create tasks (pending activities with no completion date until done)"""
         # Get bd_in_charge from lead or customer for default assignment
         default_assigned_to = None
         if lead_id:
@@ -151,7 +158,8 @@ class Activity(db.Model):
             priority=priority,
             assigned_to=final_assigned_to,
             created_by=final_assigned_to,
-            is_visible_to_bd=True
+            is_visible_to_bd=True,
+            date_completed=None  # Tasks remain null until completed
         )
         db.session.add(activity)
         return activity
@@ -209,7 +217,7 @@ class Activity(db.Model):
             'activity_type': self.activity_type,
             'activity_category': self.activity_category,
             'description': self.description,
-            'metadata': self.metadata,
+            'activity_metadata': self.activity_metadata,
             'date_created': self.date_created.isoformat() if self.date_created else None,
             'created_by': self.created_by,
             'is_visible_to_bd': self.is_visible_to_bd,
