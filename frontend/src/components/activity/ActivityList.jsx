@@ -4,8 +4,6 @@ import api from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import { activityOptions } from '../../config/options';
 import { formatDate } from '../../utils/dateFormat';
-import ActionButtons from '../common/ActionButtons';
-import IconButton from '../common/IconButton';
 
 const ActivityList = ({ 
   // Data props (passed from parent)
@@ -442,10 +440,16 @@ const ActivityList = ({
                   Priority
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px]">
+                  Created By
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px]">
                   Assigned To
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[150px]">
                   Due Date
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[150px]">
+                  Date Completed
                 </th>
                 {showActions && (
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px]">
@@ -457,7 +461,7 @@ const ActivityList = ({
             <tbody className="divide-y divide-gray-700">
               {displayLoading ? (
                 <tr>
-                  <td colSpan="10" className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan="12" className="px-4 py-8 text-center text-gray-400">
                     <div className="flex justify-center items-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-highlight1"></div>
                       <span className="ml-3">Loading activities...</span>
@@ -466,7 +470,7 @@ const ActivityList = ({
                 </tr>
               ) : displayActivities.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan="12" className="px-4 py-8 text-center text-gray-400">
                     No activities found
                   </td>
                 </tr>
@@ -527,6 +531,11 @@ const ActivityList = ({
                       )}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[120px]">
+                      <div className="truncate" title={activity.created_by}>
+                        {activity.created_by}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[120px]">
                       <div className="truncate" title={activity.assigned_to}>
                         {activity.assigned_to}
                       </div>
@@ -535,6 +544,13 @@ const ActivityList = ({
                       {activity.due_date && (
                         <div className={`truncate ${activity.is_overdue ? 'text-highlight2 font-semibold' : ''}`} title={formatDate(activity.due_date)}>
                           {formatDate(activity.due_date)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[150px]">
+                      {activity.date_completed && (
+                        <div className="truncate" title={formatDate(activity.date_completed)}>
+                          {formatDate(activity.date_completed)}
                         </div>
                       )}
                     </td>

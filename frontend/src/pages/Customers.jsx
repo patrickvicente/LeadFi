@@ -45,9 +45,9 @@ const Customers = () => {
         fetchCustomers();
     });
 
-    // Check for customer_uid in URL parameters and fetch that customer
+    // Check for customerId in URL parameters and fetch that customer
     useEffect(() => {
-        const customerId = searchParams.get('customer_uid');
+        const customerId = searchParams.get('customerId') || searchParams.get('customer_uid'); // Support both parameter names
         if (customerId) {
             fetchCustomerDetails(customerId);
         }
@@ -104,13 +104,15 @@ const Customers = () => {
                 setSelectedCustomer(response.customer);
             } else {
                 console.error('Customer not found:', customerId);
-                // Remove invalid customer_uid from URL
+                // Remove invalid parameters from URL
+                searchParams.delete('customerId');
                 searchParams.delete('customer_uid');
                 setSearchParams(searchParams);
             }
         } catch (err) {
             console.error('Error fetching customer details:', err);
-            // Remove invalid customer_uid from URL
+            // Remove invalid parameters from URL
+            searchParams.delete('customerId');
             searchParams.delete('customer_uid');
             setSearchParams(searchParams);
         } finally {
@@ -171,8 +173,8 @@ const Customers = () => {
 
     const handleViewCustomer = (customer) => {
         const customerId = customer.customer_uid || customer.customer_id;
-        // Add customer_uid to URL for direct linking
-        setSearchParams({ customer_uid: customerId });
+        // Add customerId to URL for direct linking
+        setSearchParams({ customerId: customerId });
     };
 
     const handleCreateCustomer = () => {
@@ -221,6 +223,7 @@ const Customers = () => {
           // Close modal if the deleted customer was selected
           if (selectedCustomer && (selectedCustomer.customer_uid || selectedCustomer.customer_id) === customerId) {
             setSelectedCustomer(null);
+            searchParams.delete('customerId');
             searchParams.delete('customer_uid');
             setSearchParams(searchParams);
           }
@@ -260,7 +263,8 @@ const Customers = () => {
 
     const handleCloseModal = () => {
         setSelectedCustomer(null);
-        // Remove customer_uid from URL when closing
+        // Remove customerId parameters from URL when closing
+        searchParams.delete('customerId');
         searchParams.delete('customer_uid');
         setSearchParams(searchParams);
     };
@@ -270,8 +274,8 @@ const Customers = () => {
     };
 
     const handleViewLead = (lead) => {
-      // Navigate to leads page with lead_id as URL parameter
-      navigate(`/leads?lead_id=${lead.lead_id}`);
+      // Navigate to leads page with leadId as URL parameter
+      navigate(`/leads?leadId=${lead.lead_id}`);
     };
 
     if (error) {

@@ -46,7 +46,7 @@ const Leads = () => {
 
   // Check for URL parameters
   useEffect(() => {
-    const leadId = searchParams.get('lead_id');
+    const leadId = searchParams.get('leadId') || searchParams.get('lead_id'); // Support both parameter names
     const action = searchParams.get('action');
     
     if (leadId) {
@@ -72,13 +72,15 @@ const Leads = () => {
         // This prevents the modal from reopening if the user navigates back
       } else {
         console.error('Lead not found:', leadId);
-        // Remove invalid lead_id from URL
+        // Remove invalid parameters from URL
+        searchParams.delete('leadId');
         searchParams.delete('lead_id');
         setSearchParams(searchParams);
       }
     } catch (err) {
       console.error('Error fetching lead details:', err);
-      // Remove invalid lead_id from URL
+      // Remove invalid parameters from URL
+      searchParams.delete('leadId');
       searchParams.delete('lead_id');
       setSearchParams(searchParams);
     } finally {
@@ -174,13 +176,14 @@ const Leads = () => {
 
   const handleViewLead = (lead) => {
     setSelectedLeadDetails(lead);
-    // Add lead_id to URL for direct linking
-    setSearchParams({ lead_id: lead.lead_id });
+    // Add leadId to URL for direct linking
+    setSearchParams({ leadId: lead.lead_id });
   };
 
   const handleCloseLeadDetails = () => {
     setSelectedLeadDetails(null);
-    // Remove lead_id from URL when closing
+    // Remove leadId parameters from URL when closing
+    searchParams.delete('leadId');
     searchParams.delete('lead_id');
     setSearchParams(searchParams);
   };

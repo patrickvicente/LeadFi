@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { XMarkIcon, EyeIcon, PlusIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 import { formatDateOnly } from '../../utils/dateFormat';
 import { optionHelpers } from '../../config/options';
@@ -7,6 +7,7 @@ import ActionButtons from '../common/ActionButtons';
 import IconButton from '../common/IconButton';
 import FormSelect from '../common/FormSelect';
 import ActivityTaskModal from '../activity/ActivityTaskModal';
+import ActivitySummary from '../activity/ActivitySummary';
 
 const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDelete, onSubmit, onViewLead }) => {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -130,10 +131,10 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
     }
   };
 
-  const handleActivitySuccess = () => {
-    setShowActivityModal(false);
-    // Could refresh customer data here if needed
-  };
+      const handleActivitySuccess = useCallback(() => {
+        setShowActivityModal(false);
+        // Could refresh customer data here if needed
+    }, []);
 
   const openActivityModal = (mode = 'activity') => {
     setActivityModalMode(mode);
@@ -452,7 +453,15 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
                       </div>
                     </div>
                     <div className="space-y-4">
-                      <p className="text-gray-400">No recent activities</p>
+                      <ActivitySummary 
+                        customerUid={customer.customer_uid || customer.customer_id}
+                        title=""
+                        limit={5}
+                        compact={true}
+                        showHeader={false}
+                        showActions={false}
+                        onActivityAdded={handleActivitySuccess}
+                      />
                     </div>
                   </div>
                 </>

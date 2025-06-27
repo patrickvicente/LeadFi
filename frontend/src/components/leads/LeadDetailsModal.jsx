@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { XMarkIcon, PlusIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 import { formatDate } from '../../utils/dateFormat';
 import { optionHelpers } from '../../config/options';
@@ -6,6 +6,7 @@ import { validateForm } from '../../utils/formValidation';
 import ActionButtons from '../common/ActionButtons';
 import IconButton from '../common/IconButton';
 import ActivityTaskModal from '../activity/ActivityTaskModal';
+import ActivitySummary from '../activity/ActivitySummary';
 
 const LeadDetailsModal = ({ lead, loading = false, onClose, onEdit, onDelete, onConvert, onSubmit }) => {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -90,10 +91,10 @@ const LeadDetailsModal = ({ lead, loading = false, onClose, onEdit, onDelete, on
     }
   };
 
-  const handleActivitySuccess = () => {
+  const handleActivitySuccess = useCallback(() => {
     setShowActivityModal(false);
     // Could refresh lead data here if needed
-  };
+  }, []);
 
   const openActivityModal = (mode = 'activity') => {
     setActivityModalMode(mode);
@@ -429,8 +430,15 @@ const LeadDetailsModal = ({ lead, loading = false, onClose, onEdit, onDelete, on
                       </div>
                     </div>
                     <div className="space-y-4">
-                      {/* Add your activities list here */}
-                      <p className="text-gray-400">No recent activities</p>
+                      <ActivitySummary 
+                        leadId={lead.lead_id}
+                        title=""
+                        limit={5}
+                        compact={true}
+                        showHeader={false}
+                        showActions={false}
+                        onActivityAdded={handleActivitySuccess}
+                      />
                     </div>
                   </div>
                 </>
