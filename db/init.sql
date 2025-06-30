@@ -79,15 +79,14 @@ CREATE TABLE IF NOT EXISTS "vip_history" (
   FOREIGN KEY ("customer_uid") REFERENCES "customer" ("customer_uid")
 );
 
--- Enhanced Activity table (supports both activities and tasks)
+-- Enhanced Activity table (lead-centric, supports both activities and tasks)
 CREATE TABLE IF NOT EXISTS "activity" (
   "activity_id" serial PRIMARY KEY NOT NULL,
-  "lead_id" int,
-  "customer_uid" INTEGER, -- References customer table
+  "lead_id" int NOT NULL, -- Required: all activities must be linked to a lead
   "activity_type" varchar(50) NOT NULL,
   "activity_category" varchar(20) NOT NULL DEFAULT 'manual', -- 'manual', 'system', 'automated'
   "description" text,
-  "activity_metadata" jsonb, -- Structured additional data for system activities (renamed from metadata)
+  "activity_metadata" jsonb, -- Structured additional data for system activities
   "date_created" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "created_by" varchar(50), -- Who/what created the activity
   "is_visible_to_bd" boolean DEFAULT true, -- Visibility control
@@ -96,25 +95,24 @@ CREATE TABLE IF NOT EXISTS "activity" (
   "due_date" timestamp,
   "status" varchar(20) DEFAULT 'completed', -- 'pending', 'in_progress', 'completed', 'cancelled'
   "priority" varchar(10) DEFAULT 'medium', -- 'low', 'medium', 'high'
-  "assigned_to" varchar(50), -- Defaults to lead/customer bd_in_charge
+  "assigned_to" varchar(50), -- Defaults to lead bd_in_charge
   "date_completed" timestamp, -- For activities: same as date_created, for tasks: null until completed
   
   -- Constraints
   CHECK (activity_category IN ('manual', 'system', 'automated')),
   CHECK (status IN ('pending', 'in_progress', 'completed', 'cancelled')),
   CHECK (priority IN ('low', 'medium', 'high')),
-  CHECK (lead_id IS NOT NULL OR customer_uid IS NOT NULL) -- At least one entity must be linked
+  CONSTRAINT activity_lead_required CHECK (lead_id IS NOT NULL)
 );
 
 COMMENT ON TABLE "daily_trading_volume" IS 'Composite PK ensures unique daily trading record per customer';
+COMMENT ON TABLE "activity" IS 'Activities and tasks are lead-centric. Customer activities are accessed via the lead-customer relationship through the contact table.';
 
 -- Enhanced Activity table foreign keys and indexes
 ALTER TABLE "activity" ADD FOREIGN KEY ("lead_id") REFERENCES "lead" ("lead_id") ON DELETE CASCADE;
-ALTER TABLE "activity" ADD FOREIGN KEY ("customer_uid") REFERENCES "customer" ("customer_uid") ON DELETE CASCADE;
 
 -- Performance indexes for activity table
 CREATE INDEX IF NOT EXISTS idx_activity_lead_id ON activity(lead_id);
-CREATE INDEX IF NOT EXISTS idx_activity_customer_uid ON activity(customer_uid);
 CREATE INDEX IF NOT EXISTS idx_activity_type ON activity(activity_type);
 CREATE INDEX IF NOT EXISTS idx_activity_category ON activity(activity_category);
 CREATE INDEX IF NOT EXISTS idx_activity_date_created ON activity(date_created DESC);
@@ -172,12 +170,11 @@ EXECUTE FUNCTION set_activity_completion();
 
 -- Enhanced Activity System Functions
 
--- Helper function to create system activities
+-- Helper function to create system activities (lead-centric)
 CREATE OR REPLACE FUNCTION create_system_activity(
     p_activity_type VARCHAR(50),
     p_description TEXT,
-    p_lead_id INTEGER DEFAULT NULL,
-    p_customer_uid INTEGER DEFAULT NULL,
+    p_lead_id INTEGER,
     p_metadata JSONB DEFAULT NULL,
     p_created_by VARCHAR(50) DEFAULT 'system'
 )
@@ -186,57 +183,62 @@ DECLARE
     new_activity_id INTEGER;
     default_assigned_to VARCHAR(50);
 BEGIN
-    -- Get the bd_in_charge from lead or customer's primary lead
-    IF p_lead_id IS NOT NULL THEN
-        SELECT bd_in_charge INTO default_assigned_to FROM lead WHERE lead_id = p_lead_id;
-    ELSIF p_customer_uid IS NOT NULL THEN
-        -- Get BD from customer's primary lead via contact table
-        SELECT l.bd_in_charge INTO default_assigned_to 
-        FROM lead l
-        JOIN contact c ON l.lead_id = c.lead_id
-        WHERE c.customer_uid = p_customer_uid AND c.is_primary_contact = true
-        LIMIT 1;
-    END IF;
+    -- Get the bd_in_charge from lead
+    SELECT bd_in_charge INTO default_assigned_to FROM lead WHERE lead_id = p_lead_id;
     
+    -- Insert the system activity (completed immediately)
     INSERT INTO activity (
-        lead_id, 
-        customer_uid, 
-        activity_type, 
-        activity_category,
-        description, 
-        activity_metadata,
-        created_by,
-        assigned_to,
-        is_visible_to_bd,
-        status,
-        date_completed
-    )
-    VALUES (
-        p_lead_id,
-        p_customer_uid,
-        p_activity_type,
-        'system',
-        p_description,
-        p_metadata,
-        p_created_by,
-        default_assigned_to,
-        true,
-        'completed',
-        CURRENT_TIMESTAMP
-    )
-    RETURNING activity_id INTO new_activity_id;
+        lead_id, activity_type, activity_category, description, 
+        activity_metadata, created_by, assigned_to, status, 
+        date_created, date_completed
+    ) VALUES (
+        p_lead_id, p_activity_type, 'system', p_description,
+        p_metadata, p_created_by, default_assigned_to, 'completed',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ) RETURNING activity_id INTO new_activity_id;
     
     RETURN new_activity_id;
 END;
 $$ LANGUAGE plpgsql;
 
--- Helper function to create tasks
+-- Helper function to create manual activities (lead-centric)
+CREATE OR REPLACE FUNCTION create_manual_activity(
+    p_activity_type VARCHAR(50),
+    p_description TEXT,
+    p_lead_id INTEGER,
+    p_created_by VARCHAR(50) DEFAULT NULL
+)
+RETURNS INTEGER AS $$
+DECLARE
+    new_activity_id INTEGER;
+    default_assigned_to VARCHAR(50);
+    final_created_by VARCHAR(50);
+BEGIN
+    -- Get the bd_in_charge from lead
+    SELECT bd_in_charge INTO default_assigned_to FROM lead WHERE lead_id = p_lead_id;
+    
+    final_created_by := COALESCE(p_created_by, default_assigned_to);
+    
+    -- Insert the manual activity (completed immediately)
+    INSERT INTO activity (
+        lead_id, activity_type, activity_category, description,
+        created_by, assigned_to, status, date_created, date_completed
+    ) VALUES (
+        p_lead_id, p_activity_type, 'manual', p_description,
+        final_created_by, default_assigned_to, 'completed',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ) RETURNING activity_id INTO new_activity_id;
+    
+    RETURN new_activity_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Helper function to create tasks (lead-centric)
 CREATE OR REPLACE FUNCTION create_task(
     p_activity_type VARCHAR(50),
     p_description TEXT,
     p_due_date TIMESTAMP,
-    p_lead_id INTEGER DEFAULT NULL,
-    p_customer_uid INTEGER DEFAULT NULL,
+    p_lead_id INTEGER,
     p_priority VARCHAR(10) DEFAULT 'medium',
     p_assigned_to VARCHAR(50) DEFAULT NULL
 )
@@ -246,222 +248,156 @@ DECLARE
     default_assigned_to VARCHAR(50);
     final_assigned_to VARCHAR(50);
 BEGIN
-    -- Get the bd_in_charge from lead or customer's primary lead
-    IF p_lead_id IS NOT NULL THEN
-        SELECT bd_in_charge INTO default_assigned_to FROM lead WHERE lead_id = p_lead_id;
-    ELSIF p_customer_uid IS NOT NULL THEN
-        -- Get BD from customer's primary lead via contact table
-        SELECT l.bd_in_charge INTO default_assigned_to 
-        FROM lead l
-        JOIN contact c ON l.lead_id = c.lead_id
-        WHERE c.customer_uid = p_customer_uid AND c.is_primary_contact = true
-        LIMIT 1;
-    END IF;
+    -- Get the bd_in_charge from lead
+    SELECT bd_in_charge INTO default_assigned_to FROM lead WHERE lead_id = p_lead_id;
     
-    -- Use provided assigned_to or default to entity's bd_in_charge
     final_assigned_to := COALESCE(p_assigned_to, default_assigned_to);
     
+    -- Insert the task (pending until completed)
     INSERT INTO activity (
-        lead_id, 
-        customer_uid, 
-        activity_type, 
-        activity_category,
-        description, 
-        due_date,
-        status,
-        priority,
-        assigned_to,
-        created_by,
-        is_visible_to_bd,
-        date_completed
-    )
-    VALUES (
-        p_lead_id,
-        p_customer_uid,
-        p_activity_type,
-        'manual',
-        p_description,
-        p_due_date,
-        'pending',
-        p_priority,
-        final_assigned_to,
-        final_assigned_to,
-        true,
-        NULL  -- Tasks start with null completion date
-    )
-    RETURNING activity_id INTO new_activity_id;
+        lead_id, activity_type, activity_category, description, due_date,
+        status, priority, assigned_to, created_by, date_completed
+    ) VALUES (
+        p_lead_id, p_activity_type, 'manual', p_description, p_due_date,
+        'pending', p_priority, final_assigned_to, final_assigned_to, NULL
+    ) RETURNING activity_id INTO new_activity_id;
     
     RETURN new_activity_id;
 END;
 $$ LANGUAGE plpgsql;
 
--- Helper function to create manual activities
-CREATE OR REPLACE FUNCTION create_manual_activity(
-    p_activity_type VARCHAR(50),
-    p_description TEXT,
-    p_lead_id INTEGER DEFAULT NULL,
-    p_customer_uid INTEGER DEFAULT NULL,
-    p_created_by VARCHAR(50) DEFAULT NULL
-)
-RETURNS INTEGER AS $$
-DECLARE
-    new_activity_id INTEGER;
-    default_assigned_to VARCHAR(50);
-    final_created_by VARCHAR(50);
-BEGIN
-    -- Get the bd_in_charge from lead or customer's primary lead
-    IF p_lead_id IS NOT NULL THEN
-        SELECT bd_in_charge INTO default_assigned_to FROM lead WHERE lead_id = p_lead_id;
-    ELSIF p_customer_uid IS NOT NULL THEN
-        -- Get BD from customer's primary lead via contact table
-        SELECT l.bd_in_charge INTO default_assigned_to 
-        FROM lead l
-        JOIN contact c ON l.lead_id = c.lead_id
-        WHERE c.customer_uid = p_customer_uid AND c.is_primary_contact = true
-        LIMIT 1;
-    END IF;
-    
-    -- Use provided created_by or default to entity's bd_in_charge
-    final_created_by := COALESCE(p_created_by, default_assigned_to);
-    
-    INSERT INTO activity (
-        lead_id, 
-        customer_uid, 
-        activity_type, 
-        activity_category,
-        description, 
-        status,
-        assigned_to,
-        created_by,
-        is_visible_to_bd
-    )
-    VALUES (
-        p_lead_id,
-        p_customer_uid,
-        p_activity_type,
-        'manual',
-        p_description,
-        'completed',
-        default_assigned_to,
-        final_created_by,
-        true
-    )
-    RETURNING activity_id INTO new_activity_id;
-    
-    RETURN new_activity_id;
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger function for tracking lead changes
+-- Function to track lead changes (existing)
 CREATE OR REPLACE FUNCTION track_lead_changes()
 RETURNS TRIGGER AS $$
+DECLARE
+    change_description TEXT;
+    metadata_json JSONB;
 BEGIN
-    -- Handle INSERT (lead created)
     IF TG_OP = 'INSERT' THEN
+        change_description := 'Lead created: ' || NEW.full_name || ' (' || NEW.company_name || ')';
+        metadata_json := jsonb_build_object(
+            'event_type', 'lead_created',
+            'lead_id', NEW.lead_id,
+            'full_name', NEW.full_name,
+            'company_name', NEW.company_name,
+            'status', NEW.status,
+            'bd_in_charge', NEW.bd_in_charge
+        );
+        
         PERFORM create_system_activity(
             'lead_created',
-            format('Lead "%s" created by %s', NEW.full_name, NEW.bd_in_charge),
+            change_description,
             NEW.lead_id,
-            NULL,
-            json_build_object(
-                'company_name', NEW.company_name,
-                'source', NEW.source,
-                'type', NEW.type,
-                'status', NEW.status
-            )::jsonb,
-            NEW.bd_in_charge
+            metadata_json
         );
-        RETURN NEW;
-    END IF;
-    
-    -- Handle UPDATE (lead updated)
-    IF TG_OP = 'UPDATE' THEN
-        -- Track status changes specifically
+        
+    ELSIF TG_OP = 'UPDATE' THEN
+        -- Track status changes
         IF OLD.status != NEW.status THEN
+            change_description := 'Lead status changed from "' || OLD.status || '" to "' || NEW.status || '"';
+            metadata_json := jsonb_build_object(
+                'event_type', 'status_changed',
+                'lead_id', NEW.lead_id,
+                'old_status', OLD.status,
+                'new_status', NEW.status,
+                'full_name', NEW.full_name,
+                'company_name', NEW.company_name
+            );
+            
             PERFORM create_system_activity(
                 'status_changed',
-                format('Lead status changed from "%s" to "%s"', OLD.status, NEW.status),
+                change_description,
                 NEW.lead_id,
-                NULL,
-                json_build_object(
-                    'old_status', OLD.status,
-                    'new_status', NEW.status,
-                    'lead_name', NEW.full_name
-                )::jsonb,
-                NEW.bd_in_charge
+                metadata_json
             );
         END IF;
         
-        -- Track conversion
-        IF OLD.is_converted = false AND NEW.is_converted = true THEN
+        -- Track conversion to customer
+        IF OLD.is_converted = FALSE AND NEW.is_converted = TRUE THEN
+            change_description := 'Lead converted to customer: ' || NEW.full_name;
+            metadata_json := jsonb_build_object(
+                'event_type', 'lead_converted',
+                'lead_id', NEW.lead_id,
+                'full_name', NEW.full_name,
+                'company_name', NEW.company_name
+            );
+            
             PERFORM create_system_activity(
                 'lead_converted',
-                format('Lead "%s" converted to customer', NEW.full_name),
+                change_description,
                 NEW.lead_id,
-                NULL,
-                json_build_object(
-                    'company_name', NEW.company_name,
-                    'final_status', NEW.status
-                )::jsonb,
-                NEW.bd_in_charge
+                metadata_json
             );
         END IF;
-        
-        RETURN NEW;
     END IF;
     
-    RETURN NULL;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger function for tracking customer changes
+-- Function to track customer changes (updated for lead-centric)
 CREATE OR REPLACE FUNCTION track_customer_changes()
 RETURNS TRIGGER AS $$
+DECLARE
+    primary_lead_id INTEGER;
+    change_description TEXT;
+    metadata_json JSONB;
 BEGIN
-    -- Handle INSERT (customer created)
+    -- Get the primary lead for this customer
+    SELECT c.lead_id INTO primary_lead_id
+    FROM contact c
+    WHERE c.customer_uid = NEW.customer_uid AND c.is_primary_contact = true
+    LIMIT 1;
+    
+    -- If no primary lead found, skip activity creation
+    IF primary_lead_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+    
     IF TG_OP = 'INSERT' THEN
+        change_description := 'Customer created: ' || NEW.name;
+        metadata_json := jsonb_build_object(
+            'event_type', 'customer_created',
+            'customer_uid', NEW.customer_uid,
+            'customer_name', NEW.name,
+            'customer_type', NEW.type
+        );
+        
         PERFORM create_system_activity(
             'customer_created',
-            format('Customer "%s" created (ID: %s)', NEW.name, NEW.customer_uid),
-            NULL,
-            NEW.customer_uid,
-            json_build_object(
-                'customer_name', NEW.name,
-                'customer_uid', NEW.customer_uid,
-                'type', NEW.type
-            )::jsonb,
-            'system'
+            change_description,
+            primary_lead_id,
+            metadata_json
         );
-        RETURN NEW;
+        
+    ELSIF TG_OP = 'UPDATE' THEN
+        change_description := 'Customer updated: ' || NEW.name;
+        metadata_json := jsonb_build_object(
+            'event_type', 'customer_updated',
+            'customer_uid', NEW.customer_uid,
+            'changes', jsonb_build_object(
+                'old_name', OLD.name,
+                'new_name', NEW.name,
+                'old_type', OLD.type,
+                'new_type', NEW.type,
+                'old_is_closed', OLD.is_closed,
+                'new_is_closed', NEW.is_closed
+            )
+        );
+        
+        PERFORM create_system_activity(
+            'customer_updated',
+            change_description,
+            primary_lead_id,
+            metadata_json
+        );
     END IF;
     
-    -- Handle UPDATE (customer updated)
-    IF TG_OP = 'UPDATE' THEN
-        -- Only track significant changes
-        IF OLD.name != NEW.name OR OLD.type != NEW.type OR OLD.is_closed != NEW.is_closed THEN
-            PERFORM create_system_activity(
-                'customer_updated',
-                format('Customer "%s" updated', NEW.name),
-                NULL,
-                NEW.customer_uid,
-                json_build_object(
-                    'customer_name', NEW.name,
-                    'old_name', OLD.name,
-                    'new_name', NEW.name,
-                    'old_closed', OLD.is_closed,
-                    'new_closed', NEW.is_closed
-                )::jsonb,
-                'system'
-            );
-        END IF;
-        RETURN NEW;
-    END IF;
-    
-    RETURN NULL;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Create triggers for automatic activity tracking
+-- Create triggers
 CREATE TRIGGER lead_activity_tracker
     AFTER INSERT OR UPDATE ON lead
     FOR EACH ROW
@@ -472,27 +408,57 @@ CREATE TRIGGER customer_activity_tracker
     FOR EACH ROW
     EXECUTE FUNCTION track_customer_changes();
 
--- Useful views for querying activities
+-- Create views for common activity queries (lead-centric)
 CREATE OR REPLACE VIEW v_tasks AS
-SELECT * FROM activity 
-WHERE status IN ('pending', 'in_progress') 
-ORDER BY due_date ASC NULLS LAST, priority DESC;
+SELECT 
+    a.*,
+    l.full_name as lead_name,
+    l.company_name,
+    l.bd_in_charge
+FROM activity a
+JOIN lead l ON a.lead_id = l.lead_id
+WHERE a.status IN ('pending', 'in_progress') 
+OR a.due_date IS NOT NULL;
 
 CREATE OR REPLACE VIEW v_completed_activities AS
-SELECT * FROM activity 
-WHERE status = 'completed'
-ORDER BY date_created DESC;
+SELECT 
+    a.*,
+    l.full_name as lead_name,
+    l.company_name,
+    l.bd_in_charge
+FROM activity a
+JOIN lead l ON a.lead_id = l.lead_id
+WHERE a.status = 'completed' AND a.due_date IS NULL;
 
 CREATE OR REPLACE VIEW v_overdue_tasks AS
-SELECT * FROM activity 
-WHERE status IN ('pending', 'in_progress') 
-AND due_date < CURRENT_TIMESTAMP
-ORDER BY due_date ASC;
+SELECT 
+    a.*,
+    l.full_name as lead_name,
+    l.company_name,
+    l.bd_in_charge
+FROM activity a
+JOIN lead l ON a.lead_id = l.lead_id
+WHERE a.due_date < CURRENT_TIMESTAMP 
+AND a.status IN ('pending', 'in_progress');
 
 CREATE OR REPLACE VIEW v_system_activities AS
-SELECT * FROM activity WHERE activity_category = 'system';
+SELECT 
+    a.*,
+    l.full_name as lead_name,
+    l.company_name,
+    l.bd_in_charge
+FROM activity a
+JOIN lead l ON a.lead_id = l.lead_id
+WHERE a.activity_category = 'system';
 
 CREATE OR REPLACE VIEW v_manual_activities AS
-SELECT * FROM activity WHERE activity_category = 'manual';
+SELECT 
+    a.*,
+    l.full_name as lead_name,
+    l.company_name,
+    l.bd_in_charge
+FROM activity a
+JOIN lead l ON a.lead_id = l.lead_id
+WHERE a.activity_category = 'manual';
 
 

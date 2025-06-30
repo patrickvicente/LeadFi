@@ -245,7 +245,7 @@ export const activityApi = {
     }
   },
 
-  // Get activities for a specific customer
+  // Get activities for a specific customer (via lead relationship)
   getCustomerActivities: async (customerUid, filters = {}) => {
     try {
       const response = await api.get('/activities', { 

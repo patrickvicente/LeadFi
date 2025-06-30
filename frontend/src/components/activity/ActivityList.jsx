@@ -4,6 +4,7 @@ import api from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import { activityOptions } from '../../config/options';
 import { formatDate } from '../../utils/dateFormat';
+import ActivityDetailsModal from './ActivityDetailsModal';
 
 const ActivityList = ({ 
   // Data props (passed from parent)
@@ -201,8 +202,27 @@ const ActivityList = ({
     if (activity.related_entity_type === 'lead' && activity.lead_id) {
       navigate(`/leads?leadId=${activity.lead_id}`);
     } else if (activity.related_entity_type === 'customer' && activity.customer_uid) {
-      navigate(`/customers?customerId=${activity.customer_uid}`);
+      navigate(`/customers?customerUid=${activity.customer_uid}`);
     }
+  };
+
+  // Activity details modal handlers
+  const handleActivityClick = (activityId) => {
+    // Add activityId to URL parameters
+    const newParams = new URLSearchParams(window.location.search);
+    newParams.set('activityId', activityId);
+    navigate({
+      pathname: window.location.pathname,
+      search: `?${newParams.toString()}`
+    });
+  };
+
+  const handleDetailsModalSuccess = () => {
+    // Refresh activities if embedded, otherwise call parent callback
+    if (isEmbedded) {
+      loadActivities(localPagination.current_page);
+    }
+    if (onActivityUpdate) onActivityUpdate();
   };
 
   // Get activity type label
@@ -478,7 +498,8 @@ const ActivityList = ({
                 displayActivities.map((activity, index) => (
                   <tr
                     key={activity.activity_id}
-                    className={`transition-colors hover:bg-gray-800 ${
+                    onClick={() => handleActivityClick(activity.activity_id)}
+                    className={`transition-colors hover:bg-gray-800 cursor-pointer ${
                       index % 2 === 0 ? 'bg-background' : 'bg-gray-900'
                     }`}
                   >
@@ -504,7 +525,10 @@ const ActivityList = ({
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[150px]">
                       <button
-                        onClick={() => handleNavigateToEntity(activity)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleNavigateToEntity(activity);
+                        }}
                         className="text-left truncate hover:text-highlight1 transition-colors cursor-pointer"
                         title={`Navigate to ${activity.related_entity_type}: ${activity.related_entity_name}`}
                       >
@@ -559,14 +583,20 @@ const ActivityList = ({
                         {activity.is_task && activity.status === 'pending' && (
                           <div className="flex space-x-2">
                             <button
-                              onClick={() => handleCompleteTask(activity.activity_id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCompleteTask(activity.activity_id);
+                              }}
                               className="text-highlight5 hover:text-green-400 font-medium text-xs"
                               title="Complete Task"
                             >
                               ✓ Complete
                             </button>
                             <button
-                              onClick={() => handleCancelTask(activity.activity_id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCancelTask(activity.activity_id);
+                              }}
                               className="text-highlight2 hover:text-red-400 font-medium text-xs"
                               title="Cancel Task"
                             >
@@ -576,7 +606,10 @@ const ActivityList = ({
                         )}
                         {activity.is_task && activity.status === 'in_progress' && (
                           <button
-                            onClick={() => handleCompleteTask(activity.activity_id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCompleteTask(activity.activity_id);
+                            }}
                             className="text-highlight5 hover:text-green-400 font-medium text-xs"
                             title="Complete Task"
                           >
@@ -647,6 +680,11 @@ const ActivityList = ({
           </div>
         )}
       </div>
+
+      {/* Activity Details Modal */}
+      <ActivityDetailsModal
+        onSuccess={handleDetailsModalSuccess}
+      />
     </div>
   );
 };

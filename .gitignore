@@ -47,6 +47,9 @@ venv/
 *.swp
 *.swo
 
+# cursor
+.cursor/
+
 # Environment
 .env
 .env.local

@@ -2,8 +2,7 @@ from marshmallow import Schema, fields, validate, validates_schema, ValidationEr
 
 class ActivitySchema(Schema):
     activity_id = fields.Int(dump_only=True)
-    lead_id = fields.Int(allow_none=True)
-    customer_uid = fields.Int(allow_none=True)
+    lead_id = fields.Int(required=True)
     activity_type = fields.Str(required=True, validate=validate.Length(min=1, max=50))
     activity_category = fields.Str(validate=validate.OneOf(['manual', 'system', 'automated']))
     description = fields.Str(allow_none=True)
@@ -24,6 +23,7 @@ class ActivitySchema(Schema):
     related_entity_type = fields.Method('get_related_entity_type', dump_only=True)
     is_overdue = fields.Method('get_is_overdue', dump_only=True)
     is_task = fields.Method('get_is_task', dump_only=True)
+    customer_info = fields.Method('get_customer_info', dump_only=True)
     
     def get_related_entity_name(self, obj):
         """Get the related entity name by calling the model method"""
@@ -40,42 +40,26 @@ class ActivitySchema(Schema):
     def get_is_task(self, obj):
         """Get the is_task status by calling the model method"""
         return obj.is_task()
-
-    @validates_schema
-    def validate_entity_relationship(self, data, **kwargs):
-        """Ensure at least one of lead_id or customer_uid is provided"""
-        if not data.get('lead_id') and not data.get('customer_uid'):
-            raise ValidationError('Either lead_id or customer_uid must be provided')
+        
+    def get_customer_info(self, obj):
+        """Get customer information for converted leads"""
+        return obj.get_customer_info()
 
 class ActivityCreateSchema(Schema):
     """Schema for creating new activities"""
-    lead_id = fields.Int(allow_none=True)
-    customer_uid = fields.Int(allow_none=True) 
+    lead_id = fields.Int(required=True)
     activity_type = fields.Str(required=True)
     description = fields.Str(required=True)
     created_by = fields.Str(allow_none=True)
 
-    @validates_schema
-    def validate_entity_relationship(self, data, **kwargs):
-        """Ensure at least one of lead_id or customer_uid is provided"""
-        if not data.get('lead_id') and not data.get('customer_uid'):
-            raise ValidationError('Either lead_id or customer_uid must be provided')
-
 class TaskCreateSchema(Schema):
     """Schema for creating new tasks"""
-    lead_id = fields.Int(allow_none=True)
-    customer_uid = fields.Int(allow_none=True)
+    lead_id = fields.Int(required=True)
     activity_type = fields.Str(required=True)
     description = fields.Str(required=True)
     due_date = fields.DateTime(required=True)
     priority = fields.Str(validate=validate.OneOf(['low', 'medium', 'high']), load_default='medium')
-    assigned_to = fields.Str(allow_none=True)  # Will default to lead/customer bd_in_charge if not provided
-
-    @validates_schema
-    def validate_entity_relationship(self, data, **kwargs):
-        """Ensure at least one of lead_id or customer_uid is provided"""
-        if not data.get('lead_id') and not data.get('customer_uid'):
-            raise ValidationError('Either lead_id or customer_uid must be provided')
+    assigned_to = fields.Str(allow_none=True)  # Will default to lead bd_in_charge if not provided
 
 class TaskUpdateSchema(Schema):
     """Schema for updating tasks"""
@@ -87,15 +71,8 @@ class TaskUpdateSchema(Schema):
 
 class SystemActivitySchema(Schema):
     """Schema for system-generated activities"""
-    lead_id = fields.Int(allow_none=True)
-    customer_uid = fields.Int(allow_none=True)
+    lead_id = fields.Int(required=True)
     activity_type = fields.Str(required=True)
     description = fields.Str(required=True)
     metadata = fields.Dict(allow_none=True)
-    created_by = fields.Str(allow_none=True)
-
-    @validates_schema
-    def validate_entity_relationship(self, data, **kwargs):
-        """Ensure at least one of lead_id or customer_uid is provided"""
-        if not data.get('lead_id') and not data.get('customer_uid'):
-            raise ValidationError('Either lead_id or customer_uid must be provided') 
+    created_by = fields.Str(allow_none=True) 

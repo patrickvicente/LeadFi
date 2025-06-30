@@ -479,7 +479,7 @@ const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDe
         onClose={() => setShowActivityModal(false)}
         mode={activityModalMode}
         prefilledData={{
-          customer_uid: customer?.customer_uid || customer?.customer_id,
+          lead_id: customer?.related_leads?.[0]?.lead_id, // Use primary lead
           activity_category: 'manual'
         }}
         onSuccess={handleActivitySuccess}

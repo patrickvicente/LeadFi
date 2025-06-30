@@ -21,6 +21,7 @@ The activity system has been fully migrated with proper completion date logic. T
 - **`migration_remove_bd_in_charge_redundancy.sql`** - Removed bd_in_charge redundancy
 - **`migration_fix_metadata_column.sql`** - Fixed SQLAlchemy naming conflict (metadata → activity_metadata)
 - **`migration_fix_completion_dates.sql`** - Fixed completion date logic for activities vs tasks
+- **`migration_remove_customer_uid_from_activities.sql`** - Transition to lead-centric model
 
 ### 📁 DEFINITIVE SOURCE:
 - **`db/init.sql`** - Complete schema reflecting all migrations
@@ -128,3 +129,108 @@ CREATE TABLE customer (
 - `init.sql` represents the definitive schema state
 - For production: backup before running any migrations
 - Test completion date logic thoroughly after deployment 
+
+## Lead-Centric Model Benefits
+
+### Why Remove customer_uid from Activities?
+
+1. **Single Source of Truth**: Every customer started as a lead, so all activities can trace back to the original lead
+2. **Simplified Data Model**: No more dual lead_id/customer_uid confusion
+3. **Better Relationship Tracking**: Full journey from lead → customer in activity history
+4. **Cleaner Frontend Logic**: Only need to select leads, not choose between lead or customer
+5. **Easier Reporting**: Conversion funnel analysis becomes straightforward
+
+### How Customer Activities Work Now
+
+```sql
+-- Customer activities are accessed via lead relationship:
+-- customer → contact table → lead → activities
+
+-- Example: Get activities for customer_uid = 123
+SELECT a.* FROM activity a
+JOIN contact c ON a.lead_id = c.lead_id
+WHERE c.customer_uid = 123;
+```
+
+### Migration Process for customer_uid Removal
+
+1. **Data Preservation**: All existing customer activities are converted to lead activities via contact table
+2. **Relationship Mapping**: Uses primary contact to link customer activities to correct lead
+3. **Orphan Handling**: Logs any activities that can't be mapped to leads
+4. **Function Updates**: All database functions now require lead_id parameter
+5. **View Recreation**: All views updated to join with lead table for entity information
+
+## Activity vs Task Completion Logic
+
+### Current Implementation (Post-Migration)
+
+- **Activities** (immediate actions): `date_completed = date_created` (completed right away)
+- **Tasks** (pending/in_progress): `date_completed = null` until actually completed
+- **System Activities**: Always completed immediately with `date_completed = date_created`
+
+### Database Functions
+
+```sql
+-- Create immediate activity (completed)
+SELECT create_manual_activity('call', 'Called client', 123);
+
+-- Create pending task (due_date required)
+SELECT create_task('follow_up', 'Follow up with proposal', '2024-01-15 10:00:00', 123, 'high');
+
+-- Create system activity (completed immediately)  
+SELECT create_system_activity('lead_created', 'Lead was created', 123, '{"source": "website"}');
+```
+
+## Deployment Instructions
+
+### Running Migrations
+
+```bash
+# Apply all migrations in order
+cd /db/migrations
+
+# Apply the customer_uid removal migration
+psql -d leadfi_db -f migration_remove_customer_uid_from_activities.sql
+```
+
+### Post-Migration Verification
+
+```sql
+-- Verify no customer_uid column exists
+\d activity
+
+-- Check all activities have lead_id
+SELECT COUNT(*) FROM activity WHERE lead_id IS NULL;  -- Should be 0
+
+-- Verify customer activities are accessible
+SELECT COUNT(*) FROM activity a
+JOIN contact c ON a.lead_id = c.lead_id
+WHERE c.customer_uid = [test_customer_id];
+
+-- Test database functions
+SELECT create_system_activity('test', 'Migration test', 1);
+```
+
+### Frontend Code Updates Status
+
+✅ **ActivityTaskModal updated**: Now shows lead selection when not pre-filled  
+✅ **Unified form approach**: Single ActivityTaskModal for all activity/task creation  
+✅ **Customer modals updated**: Pass primary lead_id instead of customer_uid  
+✅ **ActivityForm removed**: Consolidated into ActivityTaskModal  
+✅ **Lead-centric validation**: All forms now require lead_id  
+✅ **Backend API compatibility**: Customer activities still accessible via API
+
+## Current Database Schema Status
+
+- ✅ Activity table is lead-centric only
+- ✅ All database functions updated for lead-only model
+- ✅ Views recreated with lead joins
+- ✅ Triggers updated for lead-centric activity creation
+- ✅ Customer info accessible via `get_customer_info()` method
+
+## Notes
+
+- **Backwards Compatibility**: Not maintained for customer_uid in activities (breaking change)
+- **Data Migration**: All existing customer activities preserved by linking to primary lead
+- **Performance**: Improved due to simpler queries and single foreign key
+- **Future Development**: All new activities/tasks must specify lead_id 

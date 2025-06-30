@@ -4,6 +4,7 @@ import api from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import { formatDate } from '../../utils/dateFormat';
 import { activityOptions } from '../../config/options';
+import ActivityDetailsModal from './ActivityDetailsModal';
 
 const ActivitySummary = ({
   // Entity filters
@@ -36,8 +37,6 @@ const ActivitySummary = ({
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
   const navigate = useNavigate();
-
-
 
   // Fetch activities
   const fetchActivities = useCallback(async () => {
@@ -156,6 +155,21 @@ const ActivitySummary = ({
     }
   };
 
+  // Handle activity details modal
+  const handleActivityClick = (activityId) => {
+    // Add activityId to URL parameters
+    const newParams = new URLSearchParams(window.location.search);
+    newParams.set('activityId', activityId);
+    navigate({
+      pathname: window.location.pathname,
+      search: `?${newParams.toString()}`
+    });
+  };
+
+  const handleDetailsModalSuccess = () => {
+    fetchActivities(); // Refresh activities
+  };
+
   // Handle task completion
   const handleCompleteTask = async (activityId) => {
     try {
@@ -254,7 +268,8 @@ const ActivitySummary = ({
               {activities.map((activity, index) => (
                 <tr
                   key={activity.activity_id}
-                  className={`transition-colors hover:bg-gray-800 ${
+                  onClick={() => handleActivityClick(activity.activity_id)}
+                  className={`transition-colors hover:bg-gray-800 cursor-pointer ${
                     index % 2 === 0 ? 'bg-background' : 'bg-gray-900'
                   }`}
                 >
@@ -284,7 +299,10 @@ const ActivitySummary = ({
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-sm text-text">
                     <button
-                      onClick={() => handleNavigateToEntity(activity)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNavigateToEntity(activity);
+                      }}
                       className="text-left truncate hover:text-highlight1 transition-colors cursor-pointer max-w-[120px]"
                       title={`Navigate to ${activity.related_entity_type}: ${activity.related_entity_name}`}
                     >
@@ -329,7 +347,10 @@ const ActivitySummary = ({
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-text">
                       {activity.is_task && activity.status === 'pending' && (
                         <button
-                          onClick={() => handleCompleteTask(activity.activity_id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCompleteTask(activity.activity_id);
+                          }}
                           className="text-highlight5 hover:text-green-400 font-medium text-xs"
                           title="Complete Task"
                         >
@@ -344,6 +365,11 @@ const ActivitySummary = ({
           </table>
         </div>
       )}
+
+      {/* Activity Details Modal */}
+      <ActivityDetailsModal
+        onSuccess={handleDetailsModalSuccess}
+      />
     </div>
   );
 };

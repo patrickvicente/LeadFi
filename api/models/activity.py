@@ -6,8 +6,7 @@ class Activity(db.Model):
     __tablename__ = 'activity'
 
     activity_id = db.Column(db.Integer, primary_key=True)
-    lead_id = db.Column(db.Integer, db.ForeignKey('lead.lead_id', ondelete='CASCADE'))
-    customer_uid = db.Column(db.Integer, db.ForeignKey('customer.customer_uid', ondelete='CASCADE'))
+    lead_id = db.Column(db.Integer, db.ForeignKey('lead.lead_id', ondelete='CASCADE'), nullable=False)
     activity_type = db.Column(db.String(50), nullable=False)
     activity_category = db.Column(db.String(20), nullable=False, default='manual')
     description = db.Column(db.Text)
@@ -20,12 +19,11 @@ class Activity(db.Model):
     due_date = db.Column(db.DateTime)
     status = db.Column(db.String(20), default='completed')
     priority = db.Column(db.String(10), default='medium')
-    assigned_to = db.Column(db.String(50))  # Defaults to lead/customer bd_in_charge
+    assigned_to = db.Column(db.String(50))  # Defaults to lead bd_in_charge
     date_completed = db.Column(db.DateTime)
 
     # Relationships
     lead = db.relationship('Lead', backref=db.backref('activities', lazy=True))
-    customer = db.relationship('Customer', backref=db.backref('activities', lazy=True))
 
     # Activity categories
     MANUAL = 'manual'
@@ -63,104 +61,80 @@ class Activity(db.Model):
     ]
 
     @classmethod
-    def create_system_activity(cls, activity_type, description, lead_id=None, customer_uid=None, 
+    def create_system_activity(cls, activity_type, description, lead_id, 
                               activity_metadata=None, created_by='system'):
         """Helper method to create system activities (completed immediately)"""
-        # Get bd_in_charge from lead or customer for assignment
-        assigned_to = None
-        if lead_id:
-            from api.models.lead import Lead
-            lead = Lead.query.get(lead_id)
-            assigned_to = lead.bd_in_charge if lead else None
-        elif customer_uid:
-            from api.models.customer import Customer
-            customer = Customer.query.get(customer_uid)
-            assigned_to = customer.bd_in_charge if customer else None
+        # Get bd_in_charge from lead for assignment
+        from api.models.lead import Lead
+        lead = Lead.query.get(lead_id)
+        assigned_to = lead.bd_in_charge if lead else None
             
         current_time = datetime.utcnow()
         
-        activity = cls(
-            lead_id=lead_id,
-            customer_uid=customer_uid,
-            activity_type=activity_type,
-            activity_category=cls.SYSTEM,
-            description=description,
-            activity_metadata=activity_metadata,
-            created_by=created_by,
-            assigned_to=assigned_to,
-            is_visible_to_bd=True,
-            status=cls.COMPLETED,
-            date_created=current_time,
-            date_completed=current_time  # System activities are completed immediately
-        )
+        activity = cls()
+        activity.lead_id = lead_id
+        activity.activity_type = activity_type
+        activity.activity_category = cls.SYSTEM
+        activity.description = description
+        activity.activity_metadata = activity_metadata
+        activity.created_by = created_by
+        activity.assigned_to = assigned_to
+        activity.is_visible_to_bd = True
+        activity.status = cls.COMPLETED
+        activity.date_created = current_time
+        activity.date_completed = current_time  # System activities are completed immediately
         db.session.add(activity)
         return activity
 
     @classmethod
-    def create_manual_activity(cls, lead_id=None, customer_uid=None, activity_type=None,
+    def create_manual_activity(cls, lead_id, activity_type=None,
                               description=None, created_by=None):
         """Helper method to create manual BD activities (completed immediately)"""
-        # Get bd_in_charge from lead or customer for assignment
-        assigned_to = None
-        if lead_id:
-            from api.models.lead import Lead
-            lead = Lead.query.get(lead_id)
-            assigned_to = lead.bd_in_charge if lead else None
-        elif customer_uid:
-            from api.models.customer import Customer
-            customer = Customer.query.get(customer_uid)
-            assigned_to = customer.bd_in_charge if customer else None
+        # Get bd_in_charge from lead for assignment
+        from api.models.lead import Lead
+        lead = Lead.query.get(lead_id)
+        assigned_to = lead.bd_in_charge if lead else None
             
         final_created_by = created_by or assigned_to
         current_time = datetime.utcnow()
         
-        activity = cls(
-            lead_id=lead_id,
-            customer_uid=customer_uid,
-            activity_type=activity_type,
-            activity_category=cls.MANUAL,
-            description=description,
-            created_by=final_created_by,
-            assigned_to=assigned_to,
-            is_visible_to_bd=True,
-            status=cls.COMPLETED,
-            date_created=current_time,
-            date_completed=current_time  # Activities are completed immediately (same as date_created)
-        )
+        activity = cls()
+        activity.lead_id = lead_id
+        activity.activity_type = activity_type
+        activity.activity_category = cls.MANUAL
+        activity.description = description
+        activity.created_by = final_created_by
+        activity.assigned_to = assigned_to
+        activity.is_visible_to_bd = True
+        activity.status = cls.COMPLETED
+        activity.date_created = current_time
+        activity.date_completed = current_time  # Activities are completed immediately (same as date_created)
         db.session.add(activity)
         return activity
 
     @classmethod
-    def create_task(cls, activity_type, description, due_date, lead_id=None, customer_uid=None,
+    def create_task(cls, activity_type, description, due_date, lead_id,
                    priority='medium', assigned_to=None):
         """Helper method to create tasks (pending activities with no completion date until done)"""
-        # Get bd_in_charge from lead or customer for default assignment
-        default_assigned_to = None
-        if lead_id:
-            from api.models.lead import Lead
-            lead = Lead.query.get(lead_id)
-            default_assigned_to = lead.bd_in_charge if lead else None
-        elif customer_uid:
-            from api.models.customer import Customer
-            customer = Customer.query.get(customer_uid)
-            default_assigned_to = customer.bd_in_charge if customer else None
+        # Get bd_in_charge from lead for default assignment
+        from api.models.lead import Lead
+        lead = Lead.query.get(lead_id)
+        default_assigned_to = lead.bd_in_charge if lead else None
             
         final_assigned_to = assigned_to or default_assigned_to
         
-        activity = cls(
-            lead_id=lead_id,
-            customer_uid=customer_uid,
-            activity_type=activity_type,
-            activity_category=cls.MANUAL,
-            description=description,
-            due_date=due_date,
-            status=cls.PENDING,
-            priority=priority,
-            assigned_to=final_assigned_to,
-            created_by=final_assigned_to,
-            is_visible_to_bd=True,
-            date_completed=None  # Tasks remain null until completed
-        )
+        activity = cls()
+        activity.lead_id = lead_id
+        activity.activity_type = activity_type
+        activity.activity_category = cls.MANUAL
+        activity.description = description
+        activity.due_date = due_date
+        activity.status = cls.PENDING
+        activity.priority = priority
+        activity.assigned_to = final_assigned_to
+        activity.created_by = final_assigned_to
+        activity.is_visible_to_bd = True
+        activity.date_completed = None  # Tasks remain null until completed
         db.session.add(activity)
         return activity
 
@@ -194,26 +168,42 @@ class Activity(db.Model):
         return self.status in [self.PENDING, self.IN_PROGRESS] or self.due_date is not None
 
     def get_related_entity_name(self):
-        """Get the name of the related lead or customer"""
+        """Get the name of the related lead"""
         if self.lead:
             return self.lead.full_name
-        elif self.customer:
-            return self.customer.name
-        return "Unknown"
+        return None
 
     def get_related_entity_type(self):
-        """Get whether this activity is related to a lead or customer"""
-        if self.lead_id:
-            return "lead"
-        elif self.customer_uid:
-            return "customer"
-        return "unknown"
+        """Get the type of the related entity (always 'lead' now)"""
+        return 'lead' if self.lead else None
+
+    def get_customer_info(self):
+        """Get customer information for this lead (if converted)"""
+        if not self.lead:
+            return None
+            
+        from api.models.contact import Contact
+        from api.models.customer import Customer
+        
+        # Find if this lead has been converted to a customer
+        contact = Contact.query.filter_by(lead_id=self.lead_id, is_primary_contact=True).first()
+        if contact:
+            customer = Customer.query.get(contact.customer_uid)
+            if customer:
+                return {
+                    'customer_uid': customer.customer_uid,
+                    'customer_name': customer.name,
+                    'is_converted': True
+                }
+        
+        return {'is_converted': False}
 
     def to_dict(self, include_related=False):
+        customer_info = self.get_customer_info()
+        
         result = {
             'activity_id': self.activity_id,
             'lead_id': self.lead_id,
-            'customer_uid': self.customer_uid,
             'activity_type': self.activity_type,
             'activity_category': self.activity_category,
             'description': self.description,
@@ -221,25 +211,23 @@ class Activity(db.Model):
             'date_created': self.date_created.isoformat() if self.date_created else None,
             'created_by': self.created_by,
             'is_visible_to_bd': self.is_visible_to_bd,
-            'related_entity_name': self.get_related_entity_name(),
-            'related_entity_type': self.get_related_entity_type(),
-            # Task-related fields
             'due_date': self.due_date.isoformat() if self.due_date else None,
             'status': self.status,
             'priority': self.priority,
             'assigned_to': self.assigned_to,
             'date_completed': self.date_completed.isoformat() if self.date_completed else None,
             'is_overdue': self.is_overdue(),
-            'is_task': self.is_task()
+            'is_task': self.is_task(),
+            'related_entity_name': self.get_related_entity_name(),
+            'related_entity_type': self.get_related_entity_type(),
+            # Include customer info for converted leads
+            'customer_info': customer_info
         }
         
-        if include_related:
-            if self.lead:
-                result['lead'] = self.lead.to_dict()
-            if self.customer:
-                result['customer'] = self.customer.to_dict()
-                
+        if include_related and self.lead:
+            result['lead'] = self.lead.to_dict()
+            
         return result
 
     def __repr__(self):
-        return f'<Activity {self.activity_id}: {self.activity_type} - {self.get_related_entity_name()}>' 
+        return f'<Activity {self.activity_id}: {self.activity_type} for Lead {self.lead_id}>' 

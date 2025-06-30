@@ -6,12 +6,12 @@ from api.resources.lead import LeadResource
 from api.resources.customer import CustomerResource
 from api.resources.contact import ContactResource
 from api.resources.activity import (
+    ActivityListResource,
     ActivityResource, 
     ActivityTimelineResource, 
     ActivityStatsResource, 
-    TaskResource, 
-    TaskCompleteResource, 
-    TaskCancelResource
+    TaskResource,
+    TaskListResource
 )
 from db.db_config import db, get_db_url
 import os
@@ -71,15 +71,15 @@ def create_app():
     api.add_resource(CustomerResource, '/api/customers', '/api/customers/<string:customer_uid>')
     api.add_resource(ContactResource, '/api/contacts', '/api/contacts/<int:contact_id>')
     
-    # Activity resources
-    api.add_resource(ActivityResource, '/api/activities', '/api/activities/<int:activity_id>')
+    # Activity resources (lead-centric)
+    api.add_resource(ActivityListResource, '/api/activities')
+    api.add_resource(ActivityResource, '/api/activities/<int:activity_id>')
     api.add_resource(ActivityTimelineResource, '/api/activities/timeline')
     api.add_resource(ActivityStatsResource, '/api/activities/stats')
     
-    # Task management resources
-    api.add_resource(TaskResource, '/api/tasks')
-    api.add_resource(TaskCompleteResource, '/api/tasks/<int:task_id>/complete')
-    api.add_resource(TaskCancelResource, '/api/tasks/<int:task_id>/cancel')
+    # Task management resources (unified with activities)
+    api.add_resource(TaskListResource, '/api/tasks')  # Legacy endpoint for task creation
+    api.add_resource(TaskResource, '/api/tasks/<int:task_id>')  # Task operations (complete/cancel)
     
     return app
 
