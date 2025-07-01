@@ -1,3 +1,17 @@
+-- LeadFi Database Schema
+-- This file contains the complete database schema for the LeadFi CRM system
+
+-- Applied Migrations:
+-- - migration_add_registered_email.sql
+-- - migration_add_task_features.sql  
+-- - migration_enhance_activity.sql
+-- - migration_fix_completion_dates.sql
+-- - migration_fix_metadata_column.sql
+-- - migration_remove_bd_in_charge_redundancy.sql
+-- - migration_remove_customer_uid_from_activities.sql
+-- - migration_simplify_task_assignment.sql
+-- - migration_fix_customer_schema.sql (adds bd_in_charge to customer, removes date_converted)
+
 -- Drop tables if they exist (for rebuilds)
 DROP TABLE IF EXISTS activity CASCADE;
 DROP TABLE IF EXISTS daily_trading_volume CASCADE;
@@ -36,8 +50,7 @@ CREATE TABLE IF NOT EXISTS "customer" (
   "date_closed" timestamp,
   "country" varchar(50),
   "bd_in_charge" varchar(20), -- BD responsible for this customer (copied from primary lead)
-  "date_created" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "date_converted" timestamp -- When lead was converted to customer
+  "date_created" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Contact Table
@@ -461,4 +474,57 @@ FROM activity a
 JOIN lead l ON a.lead_id = l.lead_id
 WHERE a.activity_category = 'manual';
 
+-- views for trading volume
+CREATE OR REPLACE VIEW v_trading_volume_detail AS
+SELECT
+    dtv.date,
+    dtv.customer_uid,
+    c.name as customer_name,
+    'spot' as trade_type,
+    'maker' as trade_side,
+    dtv.spot_maker_trading_volume as volume,
+    dtv.spot_maker_fees as fees
+FROM daily_trading_volume dtv
+JOIN customer c ON dtv.customer_uid = c.customer_uid
+WHERE dtv.spot_maker_trading_volume > 0
 
+UNION ALL
+
+SELECT
+    dtv.date,
+    dtv.customer_uid,
+    c.name as customer_name,
+    'spot' as trade_type,
+    'taker' as trade_side,
+    dtv.spot_taker_trading_volume as volume,
+    dtv.spot_taker_fees as fees
+FROM daily_trading_volume dtv
+JOIN customer c ON dtv.customer_uid = c.customer_uid
+WHERE dtv.spot_taker_trading_volume > 0
+
+UNION ALL
+SELECT
+    dtv.date,
+    dtv.customer_uid,
+    c.name as customer_name,
+    'futures' as trade_type,
+    'maker' as trade_side,
+    dtv.futures_maker_trading_volume as volume,
+    dtv.futures_maker_fees as fees
+FROM daily_trading_volume dtv
+JOIN customer c ON dtv.customer_uid = c.customer_uid
+WHERE dtv.futures_maker_trading_volume > 0
+
+UNION ALL
+
+SELECT
+    dtv.date,
+    dtv.customer_uid,
+    c.name as customer_name,
+    'futures' as trade_type,
+    'taker' as trade_side,
+    dtv.futures_taker_trading_volume as volume,
+    dtv.futures_taker_fees as fees
+FROM daily_trading_volume dtv
+JOIN customer c ON dtv.customer_uid = c.customer_uid
+WHERE dtv.futures_taker_trading_volume > 0;
