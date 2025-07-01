@@ -1,4 +1,3 @@
-// frontend/src/components/common/Filter.jsx
 import React from 'react';
 import { optionHelpers } from '../../config/options';
 

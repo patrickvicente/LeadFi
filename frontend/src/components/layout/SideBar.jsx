@@ -6,7 +6,8 @@ import {
   UserGroupIcon, 
   UsersIcon, 
   ChartBarIcon, 
-  ClockIcon 
+  ClockIcon,
+  PresentationChartLineIcon
 } from '@heroicons/react/24/outline';
 
 const Sidebar = () => {
@@ -16,6 +17,7 @@ const Sidebar = () => {
     { name: 'Customers', href: '/customers', icon: UsersIcon },
     { name: 'Analytics', href: '/#', icon: ChartBarIcon },
     { name: 'Activity', href: '/activity', icon: ClockIcon },
+    { name: 'Trading Volume', href: '/trading-volume', icon: PresentationChartLineIcon },
   ];
 
   return (

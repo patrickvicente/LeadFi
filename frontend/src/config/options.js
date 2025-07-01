@@ -1,12 +1,14 @@
 // Common options used across different components
 export const commonOptions = {
   dateRange: [
-    { value: 'all', label: 'All Time' },
     { value: 'today', label: 'Today' },
-    { value: 'week', label: 'This Week' },
-    { value: 'month', label: 'This Month' },
-    { value: 'quarter', label: 'This Quarter' },
-    { value: 'year', label: 'This Year' }
+    { value: 'last7Days', label: 'Last 7 Days' },
+    { value: 'last30Days', label: 'Last 30 Days'},
+    { value: 'thisMonth', label: 'This Month' },
+    { value: 'lastMonth', label: 'Last Month' },
+    { value: 'thisQuarter', label: 'This Quarter' },
+    { value: 'lastQuarter', label: 'Last Quarter' },
+    { value: 'thisYear', label: 'This Year' }
   ],
   boolean: [
     { value: 'true', label: 'Yes' },
@@ -187,9 +189,13 @@ export const tradingOptions = {
     { value: '2', label: 'VIP 2' },
     // Add more VIP levels
   ],
-  tradingType: [
+  tradeType: [
     { value: 'spot', label: 'Spot' },
     { value: 'futures', label: 'Futures' }
+  ],
+  tradeSide: [
+    { value: 'maker', label: 'Maker'},
+    { value: 'taker', label: 'Taker'}
   ]
 };
 
@@ -218,7 +224,8 @@ export const optionHelpers = {
       lead: leadOptions,
       customer: customerOptions,
       activity: activityOptions,
-      trading: tradingOptions
+      trading: tradingOptions,
+      common: commonOptions
     };
     return optionsMap[type]?.[field] || [];
   }

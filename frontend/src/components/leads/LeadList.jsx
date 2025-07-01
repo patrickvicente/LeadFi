@@ -76,7 +76,7 @@ const LeadList = ({ leads = [], onViewLead, sortHandlers }) => {
         <p className="text-gray-400">No leads found.</p>
       </div>
     );
-  }
+    }
 
   return (
     <div className="bg-background border border-gray-700 rounded-lg overflow-hidden" style={{ height: '600px', width: '100%' }}>
@@ -127,7 +127,7 @@ const LeadList = ({ leads = [], onViewLead, sortHandlers }) => {
           <tbody className="divide-y divide-gray-700">
             {leads.map((lead, index) => (
               <tr
-                key={lead.lead_id}
+          key={lead.lead_id}
                 onClick={() => onViewLead(lead)}
                 className={`cursor-pointer transition-colors hover:bg-gray-800 ${
                   index % 2 === 0 ? 'bg-background' : 'bg-gray-900'
@@ -171,7 +171,7 @@ const LeadList = ({ leads = [], onViewLead, sortHandlers }) => {
                   </div>
                 </td>
               </tr>
-            ))}
+      ))}
           </tbody>
         </table>
       </div>

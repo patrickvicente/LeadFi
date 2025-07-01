@@ -23,3 +23,8 @@ class TradingVolumeQuerySchema(Schema):
     bd_in_charge = fields.String(allow_none=True)
     page = fields.Int(allow_none=True, validate=validate.Range(min=1), load_default=1)
     per_page = fields.Int(allow_none=True, validate=validate.Range(min=1, max=100), load_default=20)
+    # Sorting parameters - only meaningful fields for trading volume analysis
+    sort_by = fields.String(allow_none=True, validate=validate.OneOf([
+        'date', 'customer_uid', 'volume', 'fees'
+    ]), load_default='date')
+    sort_order = fields.String(allow_none=True, validate=validate.OneOf(['asc', 'desc']), load_default='desc')

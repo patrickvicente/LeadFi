@@ -226,7 +226,7 @@ const ActivityList = ({
   };
 
   // Get activity type label
-  const getActivityTypeLabel = (type, category) => {
+  const getActivityTypeLabel = (type) => {
     const option = activityOptions.allActivityTypes.find(opt => opt.value === type);
     return option ? option.label : type;
   };

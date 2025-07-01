@@ -12,15 +12,23 @@ class TradingVolumeResource(Resource):
     def get(self):
         """Get trading volume with filtering, sorting and pagination"""
         try:
-            args = TradingVolumeQuerySchema().load(request.args)
+            # Validate and load query parameters
+            try:
+                args = TradingVolumeQuerySchema().load(request.args)
+            except Exception as validation_error:
+                return {'error': f'Invalid parameters: {str(validation_error)}'}, 400
+            
+            # Ensure args is a dict and not None
+            if not isinstance(args, dict):
+                return {'error': 'Invalid parameter format'}, 400
             
             # pagination param
-            page = args.get('page')
-            per_page = args.get('per_page')
+            page = args.get('page', 1)
+            per_page = args.get('per_page', 20)
 
-            # Sorting parameters
-            sort_by = request.args.get('sort_by', 'date')
-            sort_order = request.args.get('sort_order', 'desc')
+            # Sorting parameters - use args consistently
+            sort_by = args.get('sort_by', 'date')
+            sort_order = args.get('sort_order', 'desc')
 
             # Filter parameters
             start_date = args.get('start_date')
@@ -29,7 +37,7 @@ class TradingVolumeResource(Resource):
             trade_type = args.get('trade_type')
             trade_side = args.get('trade_side')
             bd_in_charge = args.get('bd_in_charge')
-
+            
             # Build query
             query = TradingVolume.query
 
@@ -56,8 +64,8 @@ class TradingVolumeResource(Resource):
                 else:
                     query = query.order_by(asc(sort_column))
             else:
-                # default sorting
-                query = query.order_by(desc(TradingVolume.date))
+                # Default sorting to match view: date DESC, then customer_uid ASC
+                query = query.order_by(desc(TradingVolume.date), asc(TradingVolume.customer_uid))
             
             # Execute query with pagination
             result = query.paginate(

@@ -102,209 +102,209 @@ const LeadForm = ({ lead, onClose, onSubmit }) => {
             <h2 className="text-2xl font-bold text-text">
               {isEdit ? 'Edit Lead' : 'Create New Lead'}
             </h2>
-            <button
-              onClick={onClose}
+          <button
+            onClick={onClose}
               className="text-gray-400 hover:text-text p-1 rounded hover:bg-gray-800"
               title="Close"
-            >
+          >
               <XMarkIcon className="h-6 w-6" />
-            </button>
-          </div>
+          </button>
+        </div>
 
-          {errors.submit && (
+        {errors.submit && (
             <div className="mb-4 p-3 bg-red-900/20 border border-highlight2 text-highlight2 rounded">
-              {errors.submit}
-            </div>
-          )}
+            {errors.submit}
+          </div>
+        )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              {/* Basic Information */}
-              <div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Basic Information */}
+            <div>
                 <label className="block text-sm font-medium text-text">Full Name *</label>
-                <input
-                  type="text"
-                  name="full_name"
-                  value={formData.full_name}
-                  onChange={handleChange}
+              <input
+                type="text"
+                name="full_name"
+                value={formData.full_name}
+                onChange={handleChange}
                   className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
                     errors.full_name ? 'border-highlight2' : ''
-                  }`}
-                  required
-                />
-                {renderError('full_name')}
-              </div>
+                }`}
+                required
+              />
+              {renderError('full_name')}
+            </div>
 
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-text">Title</label>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
+              <input
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1"
-                />
-              </div>
+              />
+            </div>
 
-              {/* Contact Information */}
-              <div>
+            {/* Contact Information */}
+            <div>
                 <label className="block text-sm font-medium text-text">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
                   className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
                     errors.email ? 'border-highlight2' : ''
-                  }`}
-                />
-                {renderError('email')}
-              </div>
+                }`}
+              />
+              {renderError('email')}
+            </div>
 
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-text">Telegram</label>
-                <input
-                  type="text"
-                  name="telegram"
-                  value={formData.telegram}
-                  onChange={handleChange}
+              <input
+                type="text"
+                name="telegram"
+                value={formData.telegram}
+                onChange={handleChange}
                   className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
                     errors.telegram ? 'border-highlight2' : ''
-                  }`}
-                />
-                {renderError('telegram')}
-              </div>
+                }`}
+              />
+              {renderError('telegram')}
+            </div>
 
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-text">Phone Number</label>
-                <input
-                  type="tel"
-                  name="phone_number"
-                  value={formData.phone_number}
-                  onChange={handleChange}
+              <input
+                type="tel"
+                name="phone_number"
+                value={formData.phone_number}
+                onChange={handleChange}
                   className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
                     errors.phone_number ? 'border-highlight2' : ''
-                  }`}
-                />
-                {renderError('phone_number')}
-              </div>
+                }`}
+              />
+              {renderError('phone_number')}
+            </div>
 
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-text">LinkedIn URL</label>
-                <input
-                  type="url"
-                  name="linkedin_url"
-                  value={formData.linkedin_url}
-                  onChange={handleChange}
+              <input
+                type="url"
+                name="linkedin_url"
+                value={formData.linkedin_url}
+                onChange={handleChange}
                   className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
                     errors.linkedin_url ? 'border-highlight2' : ''
-                  }`}
-                />
-                {renderError('linkedin_url')}
-              </div>
+                }`}
+              />
+              {renderError('linkedin_url')}
+            </div>
 
-              {/* Company Information */}
-              <div>
+            {/* Company Information */}
+            <div>
                 <label className="block text-sm font-medium text-text">Company Name</label>
-                <input
-                  type="text"
-                  name="company_name"
-                  value={formData.company_name}
-                  onChange={handleChange}
+              <input
+                type="text"
+                name="company_name"
+                value={formData.company_name}
+                onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1"
-                />
-              </div>
+              />
+            </div>
 
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-text">Country</label>
-                <input
-                  type="text"
-                  name="country"
-                  value={formData.country}
-                  onChange={handleChange}
+              <input
+                type="text"
+                name="country"
+                value={formData.country}
+                onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1"
-                />
-              </div>
+              />
+            </div>
 
-              {/* Lead Status and Source */}
-              <div>
+            {/* Lead Status and Source */}
+            <div>
                 <FormSelect
-                  name="status"
+                name="status"
                   label="Status"
-                  value={formData.status}
-                  onChange={handleChange}
+                value={formData.status}
+                onChange={handleChange}
                   type="lead"
                   error={errors.status}
-                  required
+                required
                 />
-              </div>
+            </div>
 
-              <div>
+            <div>
                 <FormSelect
-                  name="source"
+                name="source"
                   label="Source"
-                  value={formData.source}
-                  onChange={handleChange}
+                value={formData.source}
+                onChange={handleChange}
                   type="lead"
                   error={errors.source}
-                  required
+                required
                   placeholder="Select Source"
                 />
-              </div>
+            </div>
 
-              <div>
+            <div>
                 <FormSelect
-                  name="type"
+                name="type"
                   label="Type"
-                  value={formData.type}
-                  onChange={handleChange}
+                value={formData.type}
+                onChange={handleChange}
                   type="lead"
                   error={errors.type}
-                  required
+                required
                   placeholder="Select Type"
                 />
-              </div>
+            </div>
 
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-text">BD in Charge *</label>
-                <input
-                  type="text"
-                  name="bd_in_charge"
-                  value={formData.bd_in_charge}
-                  onChange={handleChange}
+              <input
+                type="text"
+                name="bd_in_charge"
+                value={formData.bd_in_charge}
+                onChange={handleChange}
                   className={`mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1 ${
                     errors.bd_in_charge ? 'border-highlight2' : ''
-                  }`}
-                  required
-                />
-                {renderError('bd_in_charge')}
-              </div>
+                }`}
+                required
+              />
+              {renderError('bd_in_charge')}
+            </div>
 
-              {/* Additional Information */}
-              <div className="col-span-2">
+            {/* Additional Information */}
+            <div className="col-span-2">
                 <label className="block text-sm font-medium text-text">Background</label>
-                <textarea
-                  name="background"
-                  value={formData.background}
-                  onChange={handleChange}
-                  rows="3"
+              <textarea
+                name="background"
+                value={formData.background}
+                onChange={handleChange}
+                rows="3"
                   className="mt-1 block w-full rounded-md border-gray-600 bg-background text-text shadow-sm focus:border-highlight1 focus:ring-highlight1"
                   placeholder="Add any background information about this lead..."
-                />
-              </div>
+              />
             </div>
+          </div>
 
             {/* Form Actions */}
             <div className="flex justify-end mt-6 pt-4 border-t border-gray-700">
-              <button
-                type="submit"
+            <button
+              type="submit"
                 className="bg-highlight1 text-white px-4 py-2 rounded hover:bg-highlight1/80 transition-colors disabled:opacity-50"
                 disabled={isSubmitting}
-              >
+            >
                 {isSubmitting ? 'Saving...' : (isEdit ? 'Update Lead' : 'Create Lead')}
-              </button>
-            </div>
-          </form>
+            </button>
+          </div>
+        </form>
         </div>
       </div>
     </div>

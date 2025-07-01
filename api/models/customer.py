@@ -19,6 +19,13 @@ class Customer(db.Model):
         lazy='select',
         cascade='all, delete-orphan'
     )
+    # relationship with trading volume (view-based, read-only)
+    trading_volumes = db.relationship(
+        'TradingVolume',
+        backref=db.backref('customer', lazy=True),
+        lazy='select',
+        viewonly=True  # Read-only relationship since it's based on a view
+    )
 
     def get_related_leads(self):
         """Get all leads that were converted to this customer"""

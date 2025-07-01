@@ -483,7 +483,8 @@ SELECT
     'spot' as trade_type,
     'maker' as trade_side,
     dtv.spot_maker_trading_volume as volume,
-    dtv.spot_maker_fees as fees
+    dtv.spot_maker_fees as fees,
+    c.bd_in_charge
 FROM daily_trading_volume dtv
 JOIN customer c ON dtv.customer_uid = c.customer_uid
 WHERE dtv.spot_maker_trading_volume > 0
@@ -497,12 +498,14 @@ SELECT
     'spot' as trade_type,
     'taker' as trade_side,
     dtv.spot_taker_trading_volume as volume,
-    dtv.spot_taker_fees as fees
+    dtv.spot_taker_fees as fees,
+    c.bd_in_charge
 FROM daily_trading_volume dtv
 JOIN customer c ON dtv.customer_uid = c.customer_uid
 WHERE dtv.spot_taker_trading_volume > 0
 
 UNION ALL
+
 SELECT
     dtv.date,
     dtv.customer_uid,
@@ -510,7 +513,8 @@ SELECT
     'futures' as trade_type,
     'maker' as trade_side,
     dtv.futures_maker_trading_volume as volume,
-    dtv.futures_maker_fees as fees
+    dtv.futures_maker_fees as fees,
+    c.bd_in_charge
 FROM daily_trading_volume dtv
 JOIN customer c ON dtv.customer_uid = c.customer_uid
 WHERE dtv.futures_maker_trading_volume > 0
@@ -524,7 +528,10 @@ SELECT
     'futures' as trade_type,
     'taker' as trade_side,
     dtv.futures_taker_trading_volume as volume,
-    dtv.futures_taker_fees as fees
+    dtv.futures_taker_fees as fees,
+    c.bd_in_charge
 FROM daily_trading_volume dtv
 JOIN customer c ON dtv.customer_uid = c.customer_uid
-WHERE dtv.futures_taker_trading_volume > 0;
+WHERE dtv.futures_taker_trading_volume > 0
+
+ORDER BY date DESC, customer_uid ASC;

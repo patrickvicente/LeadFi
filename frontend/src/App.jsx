@@ -6,6 +6,7 @@ import Customers from './pages/Customers';
 import Analytics from './pages/Analytics';
 import Activity from './pages/Activity';
 import Sidebar from './components/layout/SideBar';
+import TradingVolume from './pages/TradingVolume';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
             <Route path="/customers" element={<Customers />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/activity" element={<Activity />} />
+            <Route path="/trading-volume" element={<TradingVolume />} />
           </Routes>
         </main>
       </div>

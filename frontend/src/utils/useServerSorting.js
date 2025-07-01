@@ -89,5 +89,11 @@ export const sortableFields = {
     'type',
     'country',
     'customer_uid'
+  ],
+  tradingVolume: [
+    'date',
+    'customer_uid', 
+    'volume',
+    'fees'
   ]
 }; 

@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from api.resources.lead import LeadResource
 from api.resources.customer import CustomerResource
 from api.resources.contact import ContactResource
+from api.resources.trading_volume import TradingVolumeResource
 from api.resources.activity import (
     ActivityListResource,
     ActivityResource, 
@@ -15,6 +16,13 @@ from api.resources.activity import (
 )
 from db.db_config import db, get_db_url
 import os
+
+# Import all models to ensure they're registered with SQLAlchemy
+from api.models.lead import Lead
+from api.models.customer import Customer
+from api.models.contact import Contact
+from api.models.activity import Activity
+from api.models.trading_volume import TradingVolume
 
 def create_app():
     """
@@ -70,6 +78,7 @@ def create_app():
     api.add_resource(LeadResource, '/api/leads', '/api/leads/<int:id>')
     api.add_resource(CustomerResource, '/api/customers', '/api/customers/<string:customer_uid>')
     api.add_resource(ContactResource, '/api/contacts', '/api/contacts/<int:contact_id>')
+    api.add_resource(TradingVolumeResource, '/api/trading-volume')
     
     # Activity resources (lead-centric)
     api.add_resource(ActivityListResource, '/api/activities')
