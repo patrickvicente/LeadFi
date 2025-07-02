@@ -10,7 +10,7 @@ class TradingVolumeResource(Resource):
         self.schema_many = TradingVolumeSchema(many=True)
 
     def get(self):
-        """Get trading volume with filtering, sorting and pagination"""
+        """Get trading volume with filtering, sorting and pagination using raw SQL"""
         try:
             # Validate and load query parameters
             try:
@@ -22,14 +22,12 @@ class TradingVolumeResource(Resource):
             if not isinstance(args, dict):
                 return {'error': 'Invalid parameter format'}, 400
             
-            # pagination param
+            # Extract parameters
             page = args.get('page', 1)
             per_page = args.get('per_page', 20)
-
-            # Sorting parameters - use args consistently
             sort_by = args.get('sort_by', 'date')
             sort_order = args.get('sort_order', 'desc')
-
+            
             # Filter parameters
             start_date = args.get('start_date')
             end_date = args.get('end_date')
@@ -38,54 +36,71 @@ class TradingVolumeResource(Resource):
             trade_side = args.get('trade_side')
             bd_in_charge = args.get('bd_in_charge')
             
-            # Build query
-            query = TradingVolume.query
-
-            # Apply filters
-            if customer_uid:
-                query = query.filter(TradingVolume.customer_uid == customer_uid)
-
-            if start_date:
-                query = query.filter(TradingVolume.date >= start_date)
-            if end_date:
-                query = query.filter(TradingVolume.date <= end_date)
-            if trade_side:
-                query = query.filter(TradingVolume.trade_side == trade_side)
-            if trade_type:
-                query = query.filter(TradingVolume.trade_type == trade_type)
-            if bd_in_charge:
-                query = query.filter(TradingVolume.bd_in_charge == bd_in_charge)
-            
-            # Apply Sorting
-            if hasattr(TradingVolume, sort_by):
-                sort_column = getattr(TradingVolume, sort_by)
-                if sort_order == 'desc':
-                    query = query.order_by(desc(sort_column))
-                else:
-                    query = query.order_by(asc(sort_column))
-            else:
-                # Default sorting to match view: date DESC, then customer_uid ASC
-                query = query.order_by(desc(TradingVolume.date), asc(TradingVolume.customer_uid))
-            
-            # Execute query with pagination
-            result = query.paginate(
+            # Use the new raw SQL method
+            result = TradingVolume.get_paginated_trading_data(
+                start_date=start_date,
+                end_date=end_date,
+                customer_uid=customer_uid,
+                bd_in_charge=bd_in_charge,
+                trade_type=trade_type,
+                trade_side=trade_side,
+                sort_by=sort_by,
+                sort_order=sort_order,
                 page=page,
-                per_page=per_page,
-                error_out=False
+                per_page=per_page
             )
+            
+            # Check for errors
+            if 'error' in result:
+                return result, 500
+                
+            return result, 200
 
-            # serialize results
-            trading_volume = self.schema_many.dump(result.items)
+        except Exception as e:
+            return {'error': str(e)}, 500
 
-            return {
-                'trading_volume': trading_volume,
-                'total': result.total,
-                'pages': result.pages,
-                'current_page': result.page,
-                'per_page': result.per_page,
-                'has_next': result.has_next,
-                'has_prev': result.has_prev
-            }, 200
 
+class TradingSummaryResource(Resource):
+    def get(self):
+        """Get trading volume summary statistics"""
+        try:
+            # Validate and load query parameters
+            try:
+                args = TradingVolumeQuerySchema().load(request.args)
+            except Exception as validation_error:
+                return {'error': f'Invalid parameters: {str(validation_error)}'}, 400
+            
+            # Ensure args is a dict and not None
+            if not isinstance(args, dict):
+                return {'error': 'Invalid parameter format'}, 400
+            
+            # Extract filter parameters for summary stats
+            filter_params = {
+                'start_date': args.get('start_date'),
+                'end_date': args.get('end_date'),
+                'customer_uid': args.get('customer_uid'),
+                'bd_in_charge': args.get('bd_in_charge')
+            }
+            
+            # Remove None values
+            filter_params = {k: v for k, v in filter_params.items() if v is not None}
+            
+            # Get summary stats
+            stats = TradingVolume.get_summary_stats(**filter_params)
+
+            # Get breakdown data
+            breakdown_type = TradingVolume.get_breakdown_by_type(**filter_params)
+            breakdown_side = TradingVolume.get_breakdown_by_side(**filter_params)
+
+            # Combine all data
+
+            # Combine all data
+            result = {
+                'summary': stats,
+                'breakdown_type': breakdown_type,
+                'breakdown_side': breakdown_side
+            }
+
+            return result, 200
         except Exception as e:
             return {'error': str(e)}, 500

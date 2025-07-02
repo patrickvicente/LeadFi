@@ -361,6 +361,14 @@ export const tradingApi = {
     } catch (error) {
       throw new Error('Failed to fetch trading volume');
     }
+  },
+  getTradingSummary: async (filters = {}) => {
+    try {
+      const response = await api.get('/trading-summary', { params: filters });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch trading summary');
+    }
   }
 };
 
@@ -369,5 +377,9 @@ export default {
   lead: leadApi,
   customer: customerApi,
   activity: activityApi,
-  trading: tradingApi
+  trading: tradingApi,
+  
+  // Direct trading methods for convenience
+  getTradingVolume: tradingApi.getTradingVolume,
+  getTradingSummary: tradingApi.getTradingSummary
 };

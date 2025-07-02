@@ -4,6 +4,7 @@ import { formatVolume, formatFee } from '../utils/numberFormat';
 import { useServerSorting } from '../utils/useServerSorting';
 import Filter from "../components/common/Filter"; 
 import { getDateRange } from '../utils/dateRangeHelper';
+import TradingSummary from '../components/analytics/TradingSummary';
 
 const TradingVolume = () => {
     const [displayLoading, setDisplayLoading] = useState(false);
@@ -158,6 +159,7 @@ const TradingVolume = () => {
           </p>
         </div>
       </div>
+      <TradingSummary filters={filters} />
       <Filter
         filters={filters}
         setFilters={setFilters}

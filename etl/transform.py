@@ -248,7 +248,7 @@ def clean_daily_trading_volume(df):
     vip_df = df[vip_history_columns].copy()
     
     # Clean trading volume data
-    trading_df['date'] = pd.to_datetime(trading_df['date'])
+    trading_df['date'] = pd.to_datetime(trading_df['date'], dayfirst=True)
     trading_df['customer_uid'] = trading_df['customer_uid'].astype(str).str.ljust(8)
     
     # Remove duplicates within the trading volume data
@@ -271,7 +271,7 @@ def clean_daily_trading_volume(df):
         trading_df[col] = pd.to_numeric(trading_df[col], errors='coerce')
     
     # Clean VIP history data
-    vip_df['date'] = pd.to_datetime(vip_df['date'])
+    vip_df['date'] = pd.to_datetime(vip_df['date'], dayfirst=True)
     vip_df['customer_uid'] = vip_df['customer_uid'].astype(str).str.zfill(8)
 
     # Remove duplicates within the VIP history data
