@@ -6,20 +6,27 @@ export const getDateRange = (rangeType) => {
 
     switch(rangeType) {
     case 'today':
-        return { start: today, end: today };
+        return { startDate: today, endDate: today };
     case 'last7Days':
-        return { start: new Date(today.getTime() - 7 * dayCalc), end: today };
+        return { startDate: new Date(today.getTime() - 7 * dayCalc), endDate: today };
     case 'last30Days':
-        return { start: new Date(today.getTime() - 30 * dayCalc), end: today };
+        return { startDate: new Date(today.getTime() - 30 * dayCalc), endDate: today };
+    case 'last_30_days':
+        return { startDate: new Date(today.getTime() - 30 * dayCalc), endDate: today };
     case 'thisMonth':
-        return { start: new Date(today.getFullYear(), today.getMonth(), 1), end: today };
+        return { startDate: new Date(today.getFullYear(), today.getMonth(), 1), endDate: today };
     case 'lastMonth':
-        return { start: new Date(today.getFullYear(), today.getMonth() - 1, 1), end: new Date(today.getFullYear(), today.getMonth(), 0) };
+        return { startDate: new Date(today.getFullYear(), today.getMonth() - 1, 1), endDate: new Date(today.getFullYear(), today.getMonth(), 0) };
     case 'thisQuarter':
-        return { start: new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1), end: today };
+        return { startDate: new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1), endDate: today };
     case 'lastQuarter':
-        return { start: new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3 - 3, 1), end: new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 0) };
+        return { startDate: new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3 - 3, 1), endDate: new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 0) };
     case 'thisYear':
-        return { start: new Date(today.getFullYear(), 0, 1), end: today };
+        return { startDate: new Date(today.getFullYear(), 0, 1), endDate: today };
+    case 'all':
+        return { startDate: null, endDate: null };
+    default:
+        // Default to last 30 days if unknown range type
+        return { startDate: new Date(today.getTime() - 30 * dayCalc), endDate: today };
     }
 };

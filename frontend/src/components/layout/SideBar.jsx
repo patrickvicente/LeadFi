@@ -15,7 +15,7 @@ const Sidebar = () => {
     { name: 'Dashboard', href: '/', icon: HomeIcon },
     { name: 'Leads', href: '/leads', icon: UserGroupIcon },
     { name: 'Customers', href: '/customers', icon: UsersIcon },
-    { name: 'Analytics', href: '/#', icon: ChartBarIcon },
+    { name: 'Analytics', href: '/Analytics', icon: ChartBarIcon },
     { name: 'Activity', href: '/activity', icon: ClockIcon },
     { name: 'Trading Volume', href: '/trading-volume', icon: PresentationChartLineIcon },
   ];

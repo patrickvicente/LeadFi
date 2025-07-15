@@ -132,11 +132,11 @@ const TradingVolume = () => {
     useEffect(() => {
       if (filters.dateRange && filters.dateRange !== 'all') {
         const dateResult = getDateRange(filters.dateRange);
-        if (dateResult && dateResult.start && dateResult.end) {
+        if (dateResult && dateResult.startDate && dateResult.endDate) {
           setFilters(prev => ({
             ...prev,
-            startDate: dateResult.start,
-            endDate: dateResult.end
+            startDate: dateResult.startDate,
+            endDate: dateResult.endDate
           }));
         }
       } else if (filters.dateRange === 'all') {

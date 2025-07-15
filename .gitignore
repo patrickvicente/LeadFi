@@ -57,3 +57,6 @@ venv/
 
 # Logs
 *.log
+
+# notes
+/docs/roadmap.md
