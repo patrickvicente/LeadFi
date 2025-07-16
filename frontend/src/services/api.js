@@ -110,6 +110,16 @@ export const leadApi = {
       console.error('Error converting lead:', error);
       throw new Error(error.response?.data?.message || 'Failed to convert lead');
     }
+  }, 
+
+  // Get lead conversion rate
+  getLeadConversionRate: async (filters = {}) => {
+    try {
+      const response = await api.get('/leads/conversion-rate', { params: filters });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch lead conversion rate');
+    }
   }
 };
 
@@ -372,12 +382,24 @@ export const tradingApi = {
   }
 };
 
+export const analyticsApi = {
+  getLeadConversionRate: async (filters = {}) => {
+    try {
+      const response = await api.get('/analytics/monthly-lead-conversion-rate', { params: filters });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch lead conversion rate');
+    }
+  }
+}
+
 // Export all APIs
 export default {
   lead: leadApi,
   customer: customerApi,
   activity: activityApi,
   trading: tradingApi,
+  analytics: analyticsApi,
   
   // Direct trading methods for convenience
   getTradingVolume: tradingApi.getTradingVolume,

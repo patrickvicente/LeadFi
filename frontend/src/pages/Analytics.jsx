@@ -6,6 +6,7 @@ import ConversionRate from '../components/analytics/ConversionRate';
 import ActivityMetrics from '../components/analytics/ActivityMetrics';
 import { commonOptions } from '../config/options';
 import { getDateRange } from '../utils/dateRangeHelper';
+import { api } from '../services/api';
 
 const Analytics = () => {
   // Filter state management

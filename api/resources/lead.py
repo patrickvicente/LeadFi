@@ -189,3 +189,23 @@ class LeadResource(Resource):
         except Exception as e:
             db.session.rollback()
             return {'message': 'Error deleting lead', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+
+class LeadConversionRateResource(Resource):
+    def get(self):
+        """
+        GET /api/leads/conversion-rate
+        """
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        bd_in_charge = request.args.get('bd_in_charge')
+        
+        try:
+            result = Lead.calculate_conversion_rate(
+                start_date=start_date,
+                end_date=end_date,
+                bd_in_charge=bd_in_charge
+            )
+            return result, HTTPStatus.OK
+        except Exception as e:
+            return {'message': 'Error calculating conversion rate', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+

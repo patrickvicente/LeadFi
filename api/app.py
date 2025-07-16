@@ -23,6 +23,7 @@ from api.models.customer import Customer
 from api.models.contact import Contact
 from api.models.activity import Activity
 from api.models.trading_volume import TradingVolume
+from api.resources.analytics import LeadConversionRateResource
 
 def create_app():
     """
@@ -90,6 +91,9 @@ def create_app():
     # Task management resources (unified with activities)
     api.add_resource(TaskListResource, '/api/tasks')  # Legacy endpoint for task creation
     api.add_resource(TaskResource, '/api/tasks/<int:task_id>')  # Task operations (complete/cancel)
+
+    # Analytics resources
+    api.add_resource(LeadConversionRateResource, '/api/analytics/monthly-lead-conversion-rate')
     
     return app
 

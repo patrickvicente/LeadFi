@@ -7,25 +7,34 @@ const ConversionRate = ({ filters }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  console.log("Filters received:", filters);
+
   useEffect(() => {
     const fetchConversionData = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        // TODO: Replace with actual conversion rate API when available
-        // For now, use placeholder data that matches the theme
-        const placeholderData = [
-          { date: '2024-01-01', rate: 15.2 },
-          { date: '2024-01-02', rate: 18.5 },
-          { date: '2024-01-03', rate: 12.8 },
-          { date: '2024-01-04', rate: 22.1 },
-          { date: '2024-01-05', rate: 19.7 },
-          { date: '2024-01-06', rate: 25.3 },
-          { date: '2024-01-07', rate: 23.5 }
-        ];
-        
-        setData(placeholderData);
+        // Build API parameters from filters
+        const params = {};
+    
+        if (filters.dateRange !== 'all' && filters.startDate && filters.endDate) {
+          params.start_date = filters.startDate.toISOString().split('T')[0];
+          params.end_date = filters.endDate.toISOString().split('T')[0];
+        }
+    
+        if (filters.bdInCharge && filters.bdInCharge !== 'all') {
+          params.bd_in_charge = filters.bdInCharge;
+        }
+        console.log("Params:", params);
+    
+        const response = await api.analytics.getLeadConversionRate(params);
+        console.log("Conversion Rate Data:", response);
+        if (response.length > 0) {
+          setData(response);
+        } else {
+          setData([]); 
+        }
       } catch (error) {
         console.error('Error fetching conversion data:', error);
         setError('Failed to load conversion data');
@@ -68,15 +77,18 @@ const ConversionRate = ({ filters }) => {
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
           <XAxis 
-            dataKey="date" 
+            dataKey="month" 
             stroke="#9CA3AF"
             fontSize={10}
-            tickFormatter={(value) => new Date(value).toLocaleDateString()}
+            tickFormatter={(value) => {
+              const [year, month] = value.split('-');
+              return `${new Date(year, month - 1).toLocaleDateString('default', { month: 'short', year: 'numeric' })}`;
+            }}
           />
           <YAxis 
             stroke="#9CA3AF"
             fontSize={10}
-            tickFormatter={(value) => `${value}%`}
+            tickFormatter={(value) => `${value.toFixed(1)}%`}
           />
           <Tooltip 
             contentStyle={{
@@ -85,13 +97,16 @@ const ConversionRate = ({ filters }) => {
               borderRadius: '8px',
               color: '#F9FAFB'
             }}
-            formatter={(value) => [`${value}%`, 'Conversion Rate']}
-            labelFormatter={(label) => new Date(label).toLocaleDateString()}
+            formatter={(value) => [`${value.toFixed(1)}%`, 'Conversion Rate']}
+            labelFormatter={(label) => {
+              const [year, month] = label.split('-');
+              return `${new Date(year, month - 1).toLocaleString('default', { month: 'short' })} ${year}`;
+            }}
             labelStyle={{ color: '#9CA3AF' }}
           />
           <Line 
             type="monotone" 
-            dataKey="rate" 
+            dataKey="conversion_rate" 
             stroke="#10B981" 
             strokeWidth={2}
             dot={{ fill: '#10B981', strokeWidth: 2, r: 3 }}
