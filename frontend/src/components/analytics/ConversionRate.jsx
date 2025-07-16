@@ -7,8 +7,6 @@ const ConversionRate = ({ filters }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  console.log("Filters received:", filters);
-
   useEffect(() => {
     const fetchConversionData = async () => {
       setLoading(true);
@@ -26,7 +24,6 @@ const ConversionRate = ({ filters }) => {
         if (filters.bdInCharge && filters.bdInCharge !== 'all') {
           params.bd_in_charge = filters.bdInCharge;
         }
-        console.log("Params:", params);
     
         const response = await api.analytics.getLeadConversionRate(params);
         console.log("Conversion Rate Data:", response);

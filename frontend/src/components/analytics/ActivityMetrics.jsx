@@ -16,25 +16,65 @@ const ActivityMetrics = ({ filters }) => {
       setError(null);
       
       try {
-        // TODO: Replace with actual activity metrics API when available
-        // For now, use placeholder data that matches the theme
-        const placeholderData = [
-          { name: 'Calls', value: 45, color: '#3B82F6' },
-          { name: 'Emails', value: 32, color: '#10B981' },
-          { name: 'Meetings', value: 18, color: '#F59E0B' },
-          { name: 'Follow-ups', value: 25, color: '#EF4444' },
-          { name: 'Other', value: 12, color: '#8B5CF6' }
-        ];
-        
-        const placeholderSummary = {
-          totalActivities: 132,
-          avgResponseTime: '2.5h',
-          completedTasks: 89,
-          pendingTasks: 43
-        };
-        
-        setData(placeholderData);
-        setSummary(placeholderSummary);
+        // Build API parameters from filters
+        const params = {};
+    
+        if (filters.dateRange !== 'all' && filters.startDate && filters.endDate) {
+          params.start_date = filters.startDate.toISOString().split('T')[0];
+          params.end_date = filters.endDate.toISOString().split('T')[0];
+        }
+
+        if (filters.bdInCharge && filters.bdInCharge !== 'all') {
+          params.bd_in_charge = filters.bdInCharge;
+        }
+
+        const response = await api.analytics.getActivityAnalytics(params);
+        const responseAvgActivity = await api.analytics.getAvgDailyActivity(params);
+        console.log("Activity Metrics Data:", response);
+        console.log("Avg Daily Activity Data:", responseAvgActivity);
+
+        // Find the latest period
+        const periods = response.map(r => r.period);
+        const latestPeriod = periods.sort().reverse()[0];
+
+        // Filter for the latest period
+        const latestData = response.filter(r => r.period === latestPeriod);
+
+        // Aggregate activity_by_type and activity_by_status
+        const activityByType = {};
+        const activityByStatus = {};
+        let totalActivities = 0;
+        let avgDailyActivity = 0;
+        if (responseAvgActivity.length > 0) {
+          avgDailyActivity = responseAvgActivity.reduce((sum, item) => sum + item.avg_daily_activity, 0) / responseAvgActivity.length;
+        }
+
+        latestData.forEach(item => {
+          totalActivities += item.total_activities;
+          Object.entries(item.activity_by_type).forEach(([type, count]) => {
+            activityByType[type] = (activityByType[type] || 0) + count;
+          });
+          Object.entries(item.activity_by_status).forEach(([status, count]) => {
+            activityByStatus[status] = (activityByStatus[status] || 0) + count;
+          });
+        });
+
+        const chartData = Object.entries(activityByType).map(([name, value], idx) => ({
+          name,
+          value,
+          color: COLORS[idx % COLORS.length]
+        }));
+
+        const completedTasks = activityByStatus.completed || 0;
+        const pendingTasks = activityByStatus.pending || 0;
+
+        setData(chartData);
+        setSummary({
+          totalActivities,
+          completedTasks,
+          pendingTasks,
+          avgDailyActivity
+        });
       } catch (error) {
         console.error('Error fetching activity data:', error);
         setError('Failed to load activity data');
@@ -73,8 +113,8 @@ const ActivityMetrics = ({ filters }) => {
           <p className="text-lg font-bold text-white">{summary.totalActivities || 0}</p>
         </div>
         <div className="bg-gray-800 p-3 rounded-lg">
-          <h4 className="text-xs text-gray-400 mb-1">Avg Response Time</h4>
-          <p className="text-lg font-bold text-white">{summary.avgResponseTime || 'N/A'}</p>
+          <h4 className="text-xs text-gray-400 mb-1">Avg Daily Activity</h4>
+          <p className="text-lg font-bold text-white">{summary.avgDailyActivity || 'N/A'}</p>
         </div>
         <div className="bg-gray-800 p-3 rounded-lg">
           <h4 className="text-xs text-gray-400 mb-1">Completed Tasks</h4>
@@ -87,7 +127,7 @@ const ActivityMetrics = ({ filters }) => {
       </div>
 
       {/* Activity Distribution Chart */}
-      {data.length > 0 && (
+      {data && data.length > 0 && (
         <div className="w-full h-32">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -120,7 +160,7 @@ const ActivityMetrics = ({ filters }) => {
       )}
 
       {/* Activity Legend */}
-      {data.length > 0 && (
+      {data && data.length > 0 && (
         <div className="mt-3 space-y-1">
           {data.map((item, index) => (
             <div key={index} className="flex items-center justify-between text-xs">

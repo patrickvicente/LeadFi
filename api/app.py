@@ -23,7 +23,7 @@ from api.models.customer import Customer
 from api.models.contact import Contact
 from api.models.activity import Activity
 from api.models.trading_volume import TradingVolume
-from api.resources.analytics import LeadConversionRateResource
+from api.resources.analytics import AvgDailyActivityResource, LeadConversionRateResource, ActivityAnalyticsResource, LeadFunnelResource
 
 def create_app():
     """
@@ -94,6 +94,9 @@ def create_app():
 
     # Analytics resources
     api.add_resource(LeadConversionRateResource, '/api/analytics/monthly-lead-conversion-rate')
+    api.add_resource(ActivityAnalyticsResource, '/api/analytics/activity-analytics')
+    api.add_resource(AvgDailyActivityResource, '/api/analytics/avg-daily-activity')
+    api.add_resource(LeadFunnelResource, '/api/analytics/lead-funnel')
     
     return app
 

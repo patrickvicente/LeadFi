@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 import TradingSummary from '../components/analytics/TradingSummary';
 import TradingVolumeChart from '../components/analytics/TradingVolumeChart';
-import OutreachMetrics from '../components/analytics/OutreachMetrics';
 import ConversionRate from '../components/analytics/ConversionRate';
 import ActivityMetrics from '../components/analytics/ActivityMetrics';
+import LeadFunnel from '../components/analytics/LeadFunnel';
 import { commonOptions } from '../config/options';
 import { getDateRange } from '../utils/dateRangeHelper';
-import { api } from '../services/api';
 
 const Analytics = () => {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  
   // Filter state management
   const [filters, setFilters] = useState({
-    dateRange: 'last_30_days',
-    startDate: null,
-    endDate: null,
+    dateRange: 'thisMonth',
+    startDate: startOfMonth,
+    endDate: endOfMonth,
     customerUid: 'all',
     bdInCharge: 'all',
     tradeType: 'all'
@@ -206,10 +209,10 @@ const Analytics = () => {
             <ActivityMetrics filters={filters} />
           </div>
 
-          {/* Outreach Performance */}
+          {/* Lead Funnel (replaces Outreach Performance) */}
           <div className="bg-background border border-gray-700 rounded-lg p-6">
-            <h3 className="text-lg font-medium text-white mb-4">📧 Outreach Performance</h3>
-            <OutreachMetrics filters={filters} />
+            <h3 className="text-lg font-medium text-white mb-4">🔻 Lead Funnel</h3>
+            <LeadFunnel filters={filters} />
           </div>
         </div>
       </div>

@@ -4,7 +4,6 @@ export const commonOptions = {
     { value: 'today', label: 'Today' },
     { value: 'last7Days', label: 'Last 7 Days' },
     { value: 'last30Days', label: 'Last 30 Days'},
-    { value: 'last_30_days', label: 'Last 30 Days'},
     { value: 'thisMonth', label: 'This Month' },
     { value: 'lastMonth', label: 'Last Month' },
     { value: 'thisQuarter', label: 'This Quarter' },

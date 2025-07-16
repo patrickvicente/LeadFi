@@ -390,6 +390,30 @@ export const analyticsApi = {
     } catch (error) {
       throw new Error('Failed to fetch lead conversion rate');
     }
+  },
+  getActivityAnalytics: async (filters = {}) => {
+    try {
+      const response = await api.get('/analytics/activity-analytics', { params: filters });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch monthly activity analytics');
+    }
+  },
+  getAvgDailyActivity: async (filters = {}) => {
+    try {
+      const response = await api.get('/analytics/avg-daily-activity', { params: filters });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch average daily activity');
+    }
+  },
+  getLeadFunnel: async (filters = {}) => {
+    try {
+      const response = await api.get('/analytics/lead-funnel', { params: filters });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch lead funnel');
+    }
   }
 }
 

@@ -11,8 +11,6 @@ export const getDateRange = (rangeType) => {
         return { startDate: new Date(today.getTime() - 7 * dayCalc), endDate: today };
     case 'last30Days':
         return { startDate: new Date(today.getTime() - 30 * dayCalc), endDate: today };
-    case 'last_30_days':
-        return { startDate: new Date(today.getTime() - 30 * dayCalc), endDate: today };
     case 'thisMonth':
         return { startDate: new Date(today.getFullYear(), today.getMonth(), 1), endDate: today };
     case 'lastMonth':
