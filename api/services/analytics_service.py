@@ -226,14 +226,16 @@ def get_avg_daily_activity(start_date=None, end_date=None, bd_in_charge=None):
     except Exception as e:
         return {'error': f'Average daily activity error: {str(e)}'}
 
-def get_lead_funnel(start_date=None, end_date=None, bd_in_charge=None):
+def get_lead_funnel(bd_in_charge=None):
     """
-    Returns the lead funnel for the given period and BD in charge
+    Returns the lead funnel for the current state, optionally filtered by BD in charge only.
     """
     try:
-        conditions, params = build_sql_filters(
-            start_date, end_date, bd_in_charge
-        )
+        conditions = ["1=1"]
+        params = {}
+        if bd_in_charge:
+            conditions.append("bd_in_charge = :bd_in_charge")
+            params['bd_in_charge'] = bd_in_charge
         
         sql = f"""
             SELECT status, 

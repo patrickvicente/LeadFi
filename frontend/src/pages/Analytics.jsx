@@ -203,17 +203,18 @@ const Analytics = () => {
             <ConversionRate filters={filters} />
           </div>
 
+          {/* Lead Funnel (replaces Outreach Performance) */}
+          <div className="bg-background border border-gray-700 rounded-lg p-6">
+            <h3 className="text-lg font-medium text-white mb-4">🔻 Sales Pipeline</h3>
+            <LeadFunnel filters={filters} />
+          </div>
+
           {/* Activity Metrics */}
           <div className="bg-background border border-gray-700 rounded-lg p-6">
             <h3 className="text-lg font-medium text-white mb-4">📋 Activity Summary</h3>
             <ActivityMetrics filters={filters} />
           </div>
 
-          {/* Lead Funnel (replaces Outreach Performance) */}
-          <div className="bg-background border border-gray-700 rounded-lg p-6">
-            <h3 className="text-lg font-medium text-white mb-4">🔻 Lead Funnel</h3>
-            <LeadFunnel filters={filters} />
-          </div>
         </div>
       </div>
 

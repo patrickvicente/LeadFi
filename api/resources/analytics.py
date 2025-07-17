@@ -69,18 +69,18 @@ class LeadFunnelResource(Resource):
     def get(self):
         """
         GET /api/analytics/lead-funnel
-        Query params: start_date, end_date, bd_in_charge
+        Query params: bd_in_charge
         """
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
+        
         bd_in_charge = request.args.get('bd_in_charge')
 
+        # Handle "all" values - treat as no filter
+        if bd_in_charge == 'all':
+            bd_in_charge = None
+
         try:
-            result = get_lead_funnel(
-                start_date=start_date,
-                end_date=end_date,
-                bd_in_charge=bd_in_charge
-            )
+            result = get_lead_funnel(bd_in_charge=bd_in_charge)
             return result, HTTPStatus.OK
+
         except Exception as e:
             return {'message': 'Error calculating lead funnel', 'error': str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR

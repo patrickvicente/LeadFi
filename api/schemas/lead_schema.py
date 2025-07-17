@@ -12,7 +12,7 @@ class LeadSchema(Schema):
     ]))
     status = fields.Str(required=True, validate=validate.OneOf([
         '1. lead generated', '2. proposal', '3. negotiation', '4. registration', 
-        '4. integration', '5. closed won', '6. lost'
+        '5. integration', '6. closed won', '7. lost'
     ]))
     company_name = fields.Str(required=True)
     country = fields.Str(allow_none=True)
