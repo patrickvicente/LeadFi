@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from api.resources.lead import LeadResource
 from api.resources.customer import CustomerResource
 from api.resources.contact import ContactResource
-from api.resources.trading_volume import TradingVolumeResource, TradingSummaryResource, TradingVolumeTimeSeriesResource
+from api.resources.trading_volume import TradingVolumeResource, TradingSummaryResource, TradingVolumeTimeSeriesResource, TradingVolumeTopCustomersResource
 from api.resources.activity import (
     ActivityListResource,
     ActivityResource, 
@@ -98,7 +98,7 @@ def create_app():
     api.add_resource(AvgDailyActivityResource, '/api/analytics/avg-daily-activity')
     api.add_resource(LeadFunnelResource, '/api/analytics/lead-funnel')
     api.add_resource(TradingVolumeTimeSeriesResource, '/api/trading-volume-time-series')
-    
+    api.add_resource(TradingVolumeTopCustomersResource, '/api/analytics/trading-volume-top-customers')
     return app
 
 app = create_app()

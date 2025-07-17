@@ -11,9 +11,7 @@ const FormSelect = ({
   error,
   placeholder = "Select an option"
 }) => {
-  const options = optionHelpers.formatForForm(
-    optionHelpers.getOptions(name, type)
-  );
+  const options = optionHelpers.getOptions(name, type);
 
   return (
     <div>

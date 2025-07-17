@@ -314,6 +314,44 @@ class TradingVolume(db.Model):
             
         except Exception as e:
             return {'error': f'Breakdown by side error: {str(e)}'}
+    
+    @classmethod
+    def get_top_customers(cls, start_date=None, end_date=None, trade_type=None, trade_side=None, bd_in_charge=None):
+        """
+        Get top customers by volume
+        Returns: list of top customers by volume
+        """
+        try:
+            # Use shared filter builder
+            conditions, params = cls._build_sql_filters(
+                start_date, end_date, trade_type, trade_side, bd_in_charge
+            )
+
+            sql = f"""
+                SELECT 
+                    customer_uid,
+                    customer_name,
+                    SUM(volume) AS total_volume
+                FROM v_trading_volume_detail
+                WHERE {' AND '.join(conditions)}
+                GROUP BY customer_uid, customer_name
+                ORDER BY total_volume DESC
+                LIMIT 10
+            """
+
+            result = db.session.execute(text(sql), params).fetchall()
+            return [
+                {
+                    'customer_uid': row.customer_uid,
+                    'customer_name': row.customer_name,
+                    'total_volume': float(row.total_volume or 0)
+                }
+                for row in result
+            ]
+            
+        except Exception as e:
+            return {'error': f'Top customers error: {str(e)}'}
+
     def to_dict(self):
         return {
             'date': self.date,

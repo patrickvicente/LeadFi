@@ -123,3 +123,27 @@ class TradingVolumeTimeSeriesResource(Resource):
         
         except Exception as e:
             return {'error': str(e)}, 500
+
+class TradingVolumeTopCustomersResource(Resource):
+    def get(self):
+        """
+        GET /api/analytics/trading-volume-top-customers
+        Query params: start_date, end_date, trade_type, trade_side, bd_in_charge
+        """
+        try:
+            start_date = request.args.get('start_date')
+            end_date = request.args.get('end_date') 
+            trade_type = request.args.get('trade_type')
+            trade_side = request.args.get('trade_side')
+            bd_in_charge = request.args.get('bd_in_charge')
+
+            result = TradingVolume.get_top_customers(
+                start_date=start_date,
+                end_date=end_date,
+                trade_type=trade_type,
+                trade_side=trade_side,
+                bd_in_charge=bd_in_charge
+            )
+            return result, 200
+        except Exception as e:
+            return {'error': str(e)}, 500

@@ -9,6 +9,7 @@ import Toast from '../components/common/Toast';
 import { leadApi } from '../services/api';
 import { useServerSorting } from '../utils/useServerSorting';
 import { useToast } from '../hooks/useToast';
+import { commonOptions, leadOptions, optionHelpers } from '../config/options';
 
 const Leads = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -103,6 +104,7 @@ const Leads = () => {
       // Add filters if they're not 'all'
       if (filters.status !== 'all') params.status = filters.status;
       if (filters.source !== 'all') params.source = filters.source;
+      if (filters.search) params.search = filters.search;
       
       // Add sorting parameters if present
       if (sortBy) {
@@ -145,7 +147,7 @@ const Leads = () => {
   // Fetch when pagination or filters change (but not sorting, as that's handled by the sort callback)
   useEffect(() => {
     fetchLeads();
-  }, [pagination.currentPage, pagination.perPage, filters.status, filters.source]);
+  }, [pagination.currentPage, pagination.perPage, filters.status, filters.source, filters.search]);
 
   // Handle page change
   const handlePageChange = (newPage) => {
@@ -164,15 +166,13 @@ const Leads = () => {
     }));
   };
 
-  // Filter configuration
-  const filterConfig = {
-    showSearch: true,
-    fields: [
-      { name: 'status', type: 'lead' },
-      { name: 'source', type: 'lead' },
-      { name: 'type', type: 'lead' }
-    ]
-  };
+  // Filter config for reusable Filter component
+  const filterConfig = [
+    { key: 'search', type: 'text', label: '🔍 Search' },
+    { key: 'status', type: 'select', label: 'Status', options: optionHelpers.addAllOption(leadOptions.status) },
+    { key: 'source', type: 'select', label: 'Source', options: optionHelpers.addAllOption(leadOptions.source) },
+    { key: 'type', type: 'select', label: 'Type', options: optionHelpers.addAllOption(leadOptions.type) },
+  ];
 
   const handleViewLead = (lead) => {
     setSelectedLeadDetails(lead);
@@ -316,8 +316,7 @@ const Leads = () => {
       <Filter 
         filters={filters}
         setFilters={setFilters}
-        searchPlaceholder="Search leads..."
-        filterConfig={filterConfig}
+        config={filterConfig}
       />
 
       {loading ? (

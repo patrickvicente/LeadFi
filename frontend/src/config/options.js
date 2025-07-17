@@ -8,8 +8,7 @@ export const commonOptions = {
     { value: 'lastMonth', label: 'Last Month' },
     { value: 'thisQuarter', label: 'This Quarter' },
     { value: 'lastQuarter', label: 'Last Quarter' },
-    { value: 'thisYear', label: 'This Year' },
-    { value: 'all', label: 'All Time' }
+    { value: 'thisYear', label: 'This Year' }
   ],
   boolean: [
     { value: 'true', label: 'Yes' },
@@ -207,17 +206,6 @@ export const optionHelpers = {
     { value: 'all', label: 'All' },
     ...options
   ],
-
-  // Format options for form select
-  formatForForm: (options) => 
-    options.map(option => ({
-      value: option.value,
-      label: option.label
-    })),
-
-  // Format options for filter select
-  formatForFilter: (options) => 
-    optionHelpers.addAllOption(options),
 
   // Get options for a specific field
   getOptions: (field, type) => {

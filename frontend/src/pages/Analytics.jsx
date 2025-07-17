@@ -4,8 +4,11 @@ import TradingVolumeChart from '../components/analytics/TradingVolumeChart';
 import ConversionRate from '../components/analytics/ConversionRate';
 import ActivityMetrics from '../components/analytics/ActivityMetrics';
 import LeadFunnel from '../components/analytics/LeadFunnel';
-import { commonOptions } from '../config/options';
+import TopCustomersCard from '../components/analytics/TopCustomersCard';
+import { commonOptions, optionHelpers, tradingOptions } from '../config/options';
 import { getDateRange } from '../utils/dateRangeHelper';
+import Filter from '../components/common/Filter';
+import { customerApi } from '../services/api';
 
 const Analytics = () => {
   const now = new Date();
@@ -18,9 +21,12 @@ const Analytics = () => {
     startDate: startOfMonth,
     endDate: endOfMonth,
     customerUid: 'all',
-    bdInCharge: 'all',
-    tradeType: 'all'
+    tradeType: 'all',
+    tradeSide: 'all'
   });
+
+  // Customer options state
+  const [customerOptions, setCustomerOptions] = useState([{ value: 'all', label: 'All Customers' }]);
 
   // Handle filter changes
   const handleFilterChange = (key, value) => {
@@ -48,8 +54,8 @@ const Analytics = () => {
       startDate,
       endDate,
       customerUid: 'all',
-      bdInCharge: 'all',
-      tradeType: 'all'
+      tradeType: 'all',
+      tradeSide: 'all'
     });
   };
 
@@ -61,7 +67,34 @@ const Analytics = () => {
       startDate,
       endDate
     }));
+
+    // Fetch customers for dropdown
+    const fetchCustomers = async () => {
+      try {
+        const response = await customerApi.getCustomers({ per_page: 100 });
+        const customers = response.customer || [];
+        const options = [
+          { value: 'all', label: 'All Customers' },
+          ...customers.map(customer => ({
+            value: customer.customer_uid,
+            label: `${customer.name} (${customer.customer_uid})`
+          }))
+        ];
+        setCustomerOptions(options);
+      } catch (error) {
+        console.error('Failed to fetch customers:', error);
+      }
+    };
+    fetchCustomers();
   }, []);
+
+  // Filter config for reusable Filter component
+  const filterConfig = [
+    { key: 'dateRange', type: 'select', label: '📅 Time Period', options: optionHelpers.addAllOption(commonOptions.dateRange) },
+    { key: 'customerUid', type: 'searchable-select', label: '👥 Customer', options: customerOptions },
+    { key: 'tradeSide', type: 'select', label: 'Trade Side', options: optionHelpers.addAllOption(tradingOptions.tradeSide) },
+    { key: 'tradeType', type: 'select', label: 'Trade Type', options: optionHelpers.addAllOption(tradingOptions.tradeType) }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-900 p-6">
@@ -74,63 +107,7 @@ const Analytics = () => {
       {/* Filter Controls Section */}
       <div className="bg-background border border-gray-700 rounded-lg p-6 mb-8">
         <h2 className="text-lg font-semibold text-white mb-4">📊 Filter & Controls</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-          {/* Date Range Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">📅 Time Period</label>
-            <select
-              value={filters.dateRange}
-              onChange={(e) => handleFilterChange('dateRange', e.target.value)}
-              className="w-full bg-gray-800 border border-gray-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-            >
-              {commonOptions.dateRange.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Customer Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">👥 Customer</label>
-            <select
-              value={filters.customerUid}
-              onChange={(e) => handleFilterChange('customerUid', e.target.value)}
-              className="w-full bg-gray-800 border border-gray-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-            >
-              <option value="all">All Customers</option>
-            </select>
-          </div>
-
-          {/* BD Person Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">💼 BD Person</label>
-            <select
-              value={filters.bdInCharge}
-              onChange={(e) => handleFilterChange('bdInCharge', e.target.value)}
-              className="w-full bg-gray-800 border border-gray-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-            >
-              <option value="all">All BD Staff</option>
-            </select>
-          </div>
-
-          {/* Trade Type Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">📈 Trade Type</label>
-            <select
-              value={filters.tradeType}
-              onChange={(e) => handleFilterChange('tradeType', e.target.value)}
-              className="w-full bg-gray-800 border border-gray-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-            >
-              <option value="all">All Types</option>
-              <option value="spot">Spot</option>
-              <option value="futures">Futures</option>
-            </select>
-          </div>
-        </div>
-
+        <Filter filters={filters} setFilters={setFilters} config={filterConfig} onChange={handleFilterChange} />
         {/* Action Buttons */}
         <div className="flex gap-3">
           <button
@@ -165,31 +142,8 @@ const Analytics = () => {
               <TradingVolumeChart filters={filters} />
             </div>
           </div>
-          
-          {/* Trading Summary Cards */}
-          <div className="space-y-4">
-            <div className="bg-background border border-gray-700 rounded-lg p-6">
-              <h3 className="text-lg font-medium text-white mb-4">🎯 Quick Stats</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Avg Daily Volume:</span>
-                  <span className="text-white font-medium">$8.65M</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Top Trading Day:</span>
-                  <span className="text-white font-medium">$15.2M</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Volume Growth:</span>
-                  <span className="text-green-400 font-medium">+12.3%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Fee Efficiency:</span>
-                  <span className="text-white font-medium">0.21%</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Top Customers Card */}
+          <TopCustomersCard filters={filters} />
         </div>
       </div>
 
@@ -215,66 +169,6 @@ const Analytics = () => {
             <ActivityMetrics filters={filters} />
           </div>
 
-        </div>
-      </div>
-
-      {/* Top Performers Section */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold text-white mb-4">👥 Top Performers & Insights</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top Customers */}
-          <div className="bg-background border border-gray-700 rounded-lg p-6">
-            <h3 className="text-lg font-medium text-white mb-4">🏆 Top Customers by Volume</h3>
-            <div className="space-y-3">
-              {[
-                { name: 'Customer Alpha', volume: '$450K', percentage: '18.0%', rank: 1 },
-                { name: 'Customer Beta', volume: '$320K', percentage: '12.8%', rank: 2 },
-                { name: 'Customer Gamma', volume: '$280K', percentage: '11.2%', rank: 3 },
-                { name: 'Customer Delta', volume: '$190K', percentage: '7.6%', rank: 4 },
-                { name: 'Customer Epsilon', volume: '$150K', percentage: '6.0%', rank: 5 }
-              ].map((customer, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                      {customer.rank}
-                    </span>
-                    <span className="text-white font-medium">{customer.name}</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-white font-semibold">{customer.volume}</div>
-                    <div className="text-gray-400 text-sm">{customer.percentage}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* BD Performance */}
-          <div className="bg-background border border-gray-700 rounded-lg p-6">
-            <h3 className="text-lg font-medium text-white mb-4">💼 BD Performance Ranking</h3>
-            <div className="space-y-3">
-              {[
-                { name: 'John Smith', volume: '$1.2M', customers: 12, rank: 1 },
-                { name: 'Jane Doe', volume: '$980K', customers: 9, rank: 2 },
-                { name: 'Bob Wilson', volume: '$750K', customers: 8, rank: 3 },
-                { name: 'Alice Brown', volume: '$680K', customers: 7, rank: 4 },
-                { name: 'Mike Davis', volume: '$420K', customers: 5, rank: 5 }
-              ].map((bd, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                      {bd.rank}
-                    </span>
-                    <span className="text-white font-medium">{bd.name}</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-white font-semibold">{bd.volume}</div>
-                    <div className="text-gray-400 text-sm">{bd.customers} customers</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 

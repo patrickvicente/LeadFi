@@ -1,10 +1,11 @@
 import React, {useState, useEffect} from 'react';
-import api from '../services/api';
+import api, { customerApi } from '../services/api';
 import { formatVolume, formatFee } from '../utils/numberFormat';
 import { useServerSorting } from '../utils/useServerSorting';
 import Filter from "../components/common/Filter"; 
 import { getDateRange } from '../utils/dateRangeHelper';
 import TradingSummary from '../components/analytics/TradingSummary';
+import { commonOptions, optionHelpers, tradingOptions } from '../config/options';
 
 const TradingVolume = () => {
     const [displayLoading, setDisplayLoading] = useState(false);
@@ -24,6 +25,9 @@ const TradingVolume = () => {
       tradeType: 'all',
       tradeSide: 'all'
     });
+
+    // Customer options state
+    const [customerOptions, setCustomerOptions] = useState([{ value: 'all', label: 'All Customers' }]);
 
     // Server-side sorting hook
     const {
@@ -89,6 +93,27 @@ const TradingVolume = () => {
         fetchTradingVolume();
     }, [filters]);
 
+    // Fetch customers for dropdown
+    useEffect(() => {
+        const fetchCustomers = async () => {
+            try {
+                const response = await customerApi.getCustomers({ per_page: 100 });
+                const customers = response.customer || [];
+                const options = [
+                    { value: 'all', label: 'All Customers' },
+                    ...customers.map(customer => ({
+                        value: customer.customer_uid,
+                        label: `${customer.name} (${customer.customer_uid})`
+                    }))
+                ];
+                setCustomerOptions(options);
+            } catch (error) {
+                console.error('Failed to fetch customers:', error);
+            }
+        };
+        fetchCustomers();
+    }, []);
+
     // Create sort handlers for specific fields
     const createSortHandler = (field) => ({
         sortField,
@@ -119,15 +144,13 @@ const TradingVolume = () => {
         );
     };
 
-    // Filter configuration
-    const filterConfig = {
-      showSearch: false,
-      fields: [
-        { name: 'dateRange', type: 'common'},
-        { name: 'tradeType', type: 'trading'},
-        { name: 'tradeSide', type: 'trading'}
-      ]
-    };
+    // Filter config for reusable Filter component
+    const filterConfig = [
+      { key: 'dateRange', type: 'select', label: 'Date Range', options: optionHelpers.addAllOption(commonOptions.dateRange) },
+      { key: 'tradeType', type: 'select', label: 'Trade Type', options: optionHelpers.addAllOption(tradingOptions.tradeType) },
+      { key: 'tradeSide', type: 'select', label: 'Trade Side', options: optionHelpers.addAllOption(tradingOptions.tradeSide) },
+      { key: 'customerUid', type: 'searchable-select', label: '👥 Customer', options: customerOptions },
+    ];
 
     useEffect(() => {
       if (filters.dateRange && filters.dateRange !== 'all') {
@@ -148,6 +171,24 @@ const TradingVolume = () => {
       }
     }, [filters.dateRange]); // Only watch dateRange changes
 
+  // Add a handleFilterChange function to handle custom logic for dateRange
+  const handleFilterChange = (key, value) => {
+    if (key === 'dateRange') {
+      const { startDate, endDate } = getDateRange(value);
+      setFilters(prev => ({
+        ...prev,
+        dateRange: value,
+        startDate,
+        endDate
+      }));
+    } else {
+      setFilters(prev => ({
+        ...prev,
+        [key]: value
+      }));
+    }
+  };
+
   return (
     <div className="p-6">
       {/* Main Header - consistent with Leads/Customers */}
@@ -163,7 +204,8 @@ const TradingVolume = () => {
       <Filter
         filters={filters}
         setFilters={setFilters}
-        filterConfig={filterConfig}
+        config={filterConfig}
+        onChange={handleFilterChange}
       />
       <div className="bg-background border border-gray-700 rounded-lg overflow-hidden" style={{ height: '600px', width: '100%' }}>
         <div className="h-full overflow-auto">

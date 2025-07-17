@@ -8,6 +8,7 @@ import Toast from "../components/common/Toast";
 import { customerApi } from "../services/api";
 import { useServerSorting } from "../utils/useServerSorting";
 import { useToast } from "../hooks/useToast";
+import { commonOptions, leadOptions, optionHelpers } from '../config/options';
 
 const Customers = () => {
     const navigate = useNavigate();
@@ -69,6 +70,7 @@ const Customers = () => {
         if (filters.status !== 'all') params.status = filters.status;
         if (filters.source !== 'all') params.source = filters.source;
         if (filters.search) params.search = filters.search;
+        if (filters.type !== 'all') params.type = filters.type;
 
         console.log('Fetching customers with params:', params);
 
@@ -128,7 +130,7 @@ const Customers = () => {
     // Fetch when pagination or filters change
     useEffect(() => {
       fetchCustomers();
-    }, [pagination.currentPage, pagination.perPage, filters.status, filters.source, filters.search]);
+    }, [pagination.currentPage, pagination.perPage, filters.status, filters.source, filters.search, filters.type]);
 
     // Handle page change
     const handlePageChange = (newPage) => {
@@ -161,15 +163,13 @@ const Customers = () => {
       }
     };
 
-    // Filter configuration
-    const filterConfig = {
-      showSearch: true,
-      fields: [
-        { name: 'status', type: 'customer' },
-        { name: 'source', type: 'customer' },
-        { name: 'type', type: 'customer' }
-      ]
-    };
+    // Filter config for reusable Filter component
+    const filterConfig = [
+      { key: 'search', type: 'text', label: '🔍 Search' },
+      { key: 'status', type: 'select', label: 'Status', options: optionHelpers.addAllOption(leadOptions.status) },
+      { key: 'source', type: 'select', label: 'Source', options: optionHelpers.addAllOption(leadOptions.source) },
+      { key: 'type', type: 'select', label: 'Type', options: optionHelpers.addAllOption(leadOptions.type) },
+    ];
 
     const handleViewCustomer = (customer) => {
         const customerId = customer.customer_uid || customer.customer_id;
@@ -303,8 +303,7 @@ const Customers = () => {
         <Filter 
           filters={filters}
           setFilters={setFilters}
-          searchPlaceholder="Search customers..."
-          filterConfig={filterConfig}
+          config={filterConfig}
         />
   
         {loading ? (

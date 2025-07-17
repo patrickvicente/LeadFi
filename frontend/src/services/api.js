@@ -387,6 +387,14 @@ export const tradingApi = {
     } catch (error) {
       throw new Error('Failed to fetch trading volume time series');
     }
+  },
+  getTopCustomers: async (filters = {}) => {
+    try {
+      const response = await api.get('/analytics/trading-volume-top-customers', { params: filters });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch top customers');
+    }
   }
 };
 
