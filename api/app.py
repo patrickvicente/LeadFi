@@ -2,6 +2,15 @@ from flask import Flask, request
 from flask_restful import Api
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.exceptions import HTTPException
+
+# Error handling imports
+from api.exceptions import (
+    APIError, handle_api_error, handle_werkzeug_error, handle_generic_error
+)
+from api.utils.logging_config import setup_logging, get_logger, log_request_info, log_response_info
+
+# Resource imports
 from api.resources.lead import LeadResource
 from api.resources.customer import CustomerResource
 from api.resources.contact import ContactResource
@@ -25,10 +34,17 @@ from api.models.activity import Activity
 from api.models.trading_volume import TradingVolume
 from api.resources.analytics import AvgDailyActivityResource, LeadConversionRateResource, ActivityAnalyticsResource, LeadFunnelResource
 
+# Initialize logging
+setup_logging(
+    log_level=os.getenv('LOG_LEVEL', 'INFO'),
+    log_file=os.getenv('LOG_FILE')
+)
+logger = get_logger('api.app')
+
 def create_app():
     """
     Application factory function.
-    Sets up the Flask app, configures the database, CORS, and API resources.
+    Sets up the Flask app, configures the database, CORS, error handling, and API resources.
     """
     app = Flask(__name__)
     
@@ -51,29 +67,55 @@ def create_app():
     db.init_app(app)
     api = Api(app)
 
-    #logging middleware
+    # Error handlers
+    @app.errorhandler(APIError)
+    def handle_custom_api_error(error):
+        """Handle custom API errors."""
+        return handle_api_error(error)
+    
+    @app.errorhandler(HTTPException)
+    def handle_http_error(error):
+        """Handle HTTP exceptions."""
+        return handle_werkzeug_error(error)
+    
+    @app.errorhandler(Exception)
+    def handle_unexpected_error(error):
+        """Handle unexpected errors."""
+        return handle_generic_error(error)
+
+    # Request/Response logging middleware
     @app.before_request
-    def log_request_info():
-        print("\nIncoming request:")
-        print(f"Method: {request.method}")
-        print(f"URL: {request.url}")
-        print(f"Headers: {dict(request.headers)}")
-        print(f"Data: {request.get_data()}")
-        print(f"JSON: {request.get_json(silent=True)}")
+    def log_request():
+        """Log incoming requests."""
+        try:
+            log_request_info(request, logger)
+        except Exception as e:
+            logger.error(f"Error logging request: {e}")
 
     @app.after_request
-    def log_response_info(response):
-        # Add CORS headers to response
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
+    def log_response(response):
+        """Log outgoing responses and add CORS headers."""
+        try:
+            # Add CORS headers to response
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            
+            log_response_info(response, logger)
+        except Exception as e:
+            logger.error(f"Error logging response: {e}")
         
-        print("\nOutgoing response:")
-        print(f"Status: {response.status_code}")
-        print(f"Headers: {dict(response.headers)}")
-        print(f"Data: {response.get_data()}")
         return response
+    
+    # Health check endpoint
+    @app.route('/api/health')
+    def health_check():
+        """Health check endpoint for monitoring."""
+        return {
+            'status': 'healthy',
+            'message': 'LeadFi API is running'
+        }
     
     # Register resources
     api.add_resource(LeadResource, '/api/leads', '/api/leads/<int:id>')
@@ -99,6 +141,8 @@ def create_app():
     api.add_resource(LeadFunnelResource, '/api/analytics/lead-funnel')
     api.add_resource(TradingVolumeTimeSeriesResource, '/api/trading-volume-time-series')
     api.add_resource(TradingVolumeTopCustomersResource, '/api/analytics/trading-volume-top-customers')
+    
+    logger.info("LeadFi API initialized successfully")
     return app
 
 app = create_app()

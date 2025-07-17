@@ -1,15 +1,17 @@
 // frontend/src/services/api.js
 import axios from 'axios';
+import errorService from './errorService';
 
 // Create axios instance with default config
 const api = axios.create({
   baseURL: 'http://127.0.0.1:5000/api', // Update with your actual API URL
+  timeout: 30000, // 30 seconds
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-// Add request interceptor for authentication if needed
+// Add request interceptor for authentication and retry handling
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -23,42 +25,81 @@ api.interceptors.request.use(
   }
 );
 
-// Add response interceptor for error handling
+// Add response interceptor for comprehensive error handling
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Handle specific error cases
-    if (error.response) {
-      switch (error.response.status) {
-        case 401:
-          // Handle unauthorized
-          break;
-        case 403:
-          // Handle forbidden
-          break;
-        case 404:
-          // Handle not found
-          break;
-        default:
-          // Handle other errors
-          break;
-      }
+  (response) => {
+    // Clear retry counts on successful responses
+    if (response.config._errorContext) {
+      errorService.clearRetryCount(response.config._errorContext);
     }
+    return response;
+  },
+  async (error) => {
+    const context = error.config._errorContext || {};
+    
+    try {
+      const errorInfo = await errorService.handleAPIError(error, context);
+      
+      // Handle automatic retries
+      if (errorInfo.shouldRetry) {
+        console.log(`Retrying request to ${error.config.url} (attempt ${errorInfo.retryCount})`);
+        
+        // Wait for retry delay
+        await new Promise(resolve => setTimeout(resolve, errorInfo.retryDelay));
+        
+        // Update context with retry information
+        error.config._errorContext = {
+          ...context,
+          retryCount: errorInfo.retryCount
+        };
+        
+        // Retry the request
+        return api.request(error.config);
+      }
+      
+      // Attach processed error info to the error object
+      error.processedError = errorInfo;
+      
+    } catch (processingError) {
+      console.error('Error processing API error:', processingError);
+    }
+    
     return Promise.reject(error);
   }
 );
+
+/**
+ * Enhanced API call wrapper with error context
+ */
+const makeAPICall = async (requestFunction, context = {}) => {
+  try {
+    const result = await requestFunction();
+    return result;
+  } catch (error) {
+    // Attach context to error for processing
+    if (error.config) {
+      error.config._errorContext = context;
+    }
+    
+    // Use processed error if available
+    if (error.processedError) {
+      const userMessage = errorService.getUserFriendlyMessage(error.processedError, context);
+      throw new Error(userMessage);
+    }
+    
+    // Fallback error handling
+    throw new Error(error.response?.data?.message || error.message || 'An unexpected error occurred');
+  }
+};
 
 // Lead API calls
 export const leadApi = {
   // Get all leads with optional filters
   getLeads: async (params = {}) => {
-    try {
-      const response = await api.get('/leads', { params });
-      return response.data;
-    } catch (error) {
-      console.error('Error in getLeads:', error);
-      throw new Error(error.response?.data?.message || 'Failed to fetch leads');
-    }
+    return await makeAPICall(
+      () => api.get('/leads', { params }),
+      { operation: 'fetch_leads', params }
+    ).then(response => response.data);
   },
 
   // Get a single lead by ID
