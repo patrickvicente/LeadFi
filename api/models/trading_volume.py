@@ -23,31 +23,37 @@ class TradingVolume(db.Model):
         Returns data suitable for time-series charts
         """
         try:
-            query = db.session.query(
-                cls.date,
-                func.sum(cls.volume).label('daily_volume'),
-                func.sum(cls.fees).label('daily_fees')
-            ).filter(
-                and_(
-                    cls.date >= start_date,
-                    cls.date <= end_date
-                )
+            conditions, params = cls._build_sql_filters(
+                start_date, end_date, customer_uid
             )
-            
-            if customer_uid:
-                query = query.filter(cls.customer_uid == customer_uid)
-            
-            results = query.group_by(cls.date).order_by(cls.date).all()
-            
+
+            sql = f"""
+                SELECT
+                    date,
+                    SUM(CASE WHEN trade_side = 'maker' THEN volume ELSE 0 END) AS maker_volume,
+                    SUM(CASE WHEN trade_side = 'taker' THEN volume ELSE 0 END) AS taker_volume,
+                    SUM(CASE WHEN trade_side = 'maker' THEN fees ELSE 0 END) AS maker_fees,
+                    SUM(CASE WHEN trade_side = 'taker' THEN fees ELSE 0 END) AS taker_fees,
+                    SUM(volume) AS total_volume,
+                    SUM(fees) AS total_fees
+                FROM v_trading_volume_detail
+                WHERE {' AND '.join(conditions)}
+                GROUP BY date
+                ORDER BY date ASC
+            """
+            result = db.session.execute(text(sql), params).fetchall()
             return [
                 {
                     'date': row.date.isoformat(),
-                    'volume': float(row.daily_volume or 0),
-                    'fees': float(row.daily_fees or 0)
+                    'maker_volume': float(row.maker_volume or 0),
+                    'taker_volume': float(row.taker_volume or 0),
+                    'maker_fees': float(row.maker_fees or 0),
+                    'taker_fees': float(row.taker_fees or 0),
+                    'total_volume': float(row.total_volume or 0),
+                    'total_fees': float(row.total_fees or 0)
                 }
-                for row in results
+                for row in result
             ]
-            
         except Exception as e:
             return {'error': f'Daily volumes query error: {str(e)}'}
         

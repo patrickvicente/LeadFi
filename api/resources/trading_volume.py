@@ -93,8 +93,6 @@ class TradingSummaryResource(Resource):
             breakdown_side = TradingVolume.get_breakdown_by_side(**filter_params)
 
             # Combine all data
-
-            # Combine all data
             result = {
                 'summary': stats,
                 'breakdown_type': breakdown_type,
@@ -102,5 +100,26 @@ class TradingSummaryResource(Resource):
             }
 
             return result, 200
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+class TradingVolumeTimeSeriesResource(Resource):
+    def get(self):
+        """
+        GET /api/trading-volume-time-series
+        Query params: start_date, end_date, customer_uid
+        """
+        try:
+            start_date = request.args.get('start_date')
+            end_date = request.args.get('end_date')
+            customer_uid = request.args.get('customer_uid')
+
+            result = TradingVolume.get_daily_volumes_for_range(
+                start_date=start_date,
+                end_date=end_date,
+                customer_uid=customer_uid
+            )
+            return result, 200
+        
         except Exception as e:
             return {'error': str(e)}, 500

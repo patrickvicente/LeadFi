@@ -379,6 +379,14 @@ export const tradingApi = {
     } catch (error) {
       throw new Error('Failed to fetch trading summary');
     }
+  },
+  getTradingVolumeTimeSeries: async (filters = {}) => {
+    try {
+      const response = await api.get('/trading-volume-time-series', { params: filters });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch trading volume time series');
+    }
   }
 };
 

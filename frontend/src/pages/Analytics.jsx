@@ -44,7 +44,7 @@ const Analytics = () => {
   const resetFilters = () => {
     const { startDate, endDate } = getDateRange('last_30_days');
     setFilters({
-      dateRange: 'last_30_days',
+      dateRange: 'last30Days',
       startDate,
       endDate,
       customerUid: 'all',
