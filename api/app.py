@@ -117,6 +117,18 @@ def create_app():
             'message': 'LeadFi API is running'
         }
     
+    # Serve static files (CSS, JS) from React build
+    @app.route('/static/<path:filename>')
+    def serve_static(filename):
+        """Serve static files from React build/static directory."""
+        static_dir = '/app/frontend/build/static'
+        logger.info(f"Serving static file: {filename} from {static_dir}")
+        try:
+            return send_from_directory(static_dir, filename)
+        except FileNotFoundError:
+            logger.error(f"Static file not found: {filename}")
+            return {'error': f'Static file not found: {filename}'}, 404
+    
     # Debug endpoint to check file structure
     @app.route('/api/debug/files')
     def debug_files():
@@ -182,33 +194,50 @@ def create_app():
         if path.startswith('api/'):
             return {'error': 'API endpoint not found'}, 404
             
-        # Build directory path - more robust for Docker container
-        # In Docker: /app/frontend/build/
-        current_dir = os.path.dirname(os.path.abspath(__file__))  # /app/api
-        app_root = os.path.dirname(current_dir)  # /app
-        build_dir = os.path.join(app_root, 'frontend', 'build')
+        # Build directory path - we know this works from debug endpoint
+        build_dir = '/app/frontend/build'
         
-        # Debug logging
-        logger.info(f"Current dir: {current_dir}")
-        logger.info(f"App root: {app_root}")
-        logger.info(f"Build dir: {build_dir}")
-        logger.info(f"Build dir exists: {os.path.exists(build_dir)}")
-        if os.path.exists(build_dir):
-            logger.info(f"Build dir contents: {os.listdir(build_dir)}")
+        # Log the request for debugging
+        logger.info(f"Serving request for path: '{path}' from {build_dir}")
         
-        # Handle empty path (serve index.html)
-        if path == '':
-            path = 'index.html'
+        # Handle root path
+        if path == '' or path == '/':
+            file_path = 'index.html'
+        else:
+            file_path = path
             
-        # Try to serve the requested file
-        try:
-            return send_from_directory(build_dir, path)
-        except FileNotFoundError:
-            # For SPA routing, serve index.html for unmatched routes
+        # Full path to requested file
+        full_path = os.path.join(build_dir, file_path)
+        logger.info(f"Looking for file: {full_path}")
+        
+        # Try to serve the specific file if it exists
+        if os.path.exists(full_path) and os.path.isfile(full_path):
+            logger.info(f"Serving file: {full_path}")
+            try:
+                return send_from_directory(build_dir, file_path)
+            except Exception as e:
+                logger.error(f"Error serving {file_path}: {e}")
+                return {'error': f'Error serving file: {str(e)}'}, 500
+        
+        # If file doesn't exist, check if it's a directory request (serve index.html)
+        if os.path.exists(os.path.join(build_dir, file_path)) and os.path.isdir(os.path.join(build_dir, file_path)):
+            try:
+                return send_from_directory(os.path.join(build_dir, file_path), 'index.html')
+            except FileNotFoundError:
+                pass
+        
+        # For SPA routing, serve index.html for unmatched routes (client-side routing)
+        index_path = os.path.join(build_dir, 'index.html')
+        if os.path.exists(index_path):
+            logger.info(f"Serving index.html for SPA route: {path}")
             try:
                 return send_from_directory(build_dir, 'index.html')
-            except FileNotFoundError:
-                return {'error': 'Frontend build files not found. Check Docker build process.'}, 500
+            except Exception as e:
+                logger.error(f"Error serving index.html: {e}")
+                return {'error': f'Error serving index.html: {str(e)}'}, 500
+        else:
+            logger.error(f"index.html not found at {index_path}")
+            return {'error': 'index.html not found'}, 404
     
     logger.info("LeadFi API initialized successfully")
     return app
