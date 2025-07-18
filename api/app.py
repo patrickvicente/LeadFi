@@ -116,6 +116,40 @@ def create_app():
             'status': 'healthy',
             'message': 'LeadFi API is running'
         }
+
+    # Database connection test endpoint
+    @app.route('/api/db-test')
+    def db_test():
+        """Test database connectivity."""
+        try:
+            # Test basic database connection
+            from sqlalchemy import text
+            with db.engine.connect() as conn:
+                result = conn.execute(text("SELECT 1 as test"))
+                row = result.fetchone()
+                
+            # Test if tables exist
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            
+            return {
+                'status': 'success',
+                'message': 'Database connection successful',
+                'database_url': get_db_url().split('@')[0] + '@***',  # Hide credentials
+                'connection_test': 'PASS',
+                'query_result': row[0] if row else None,
+                'tables_found': len(tables),
+                'table_names': tables[:5]  # Show first 5 tables
+            }
+        except Exception as e:
+            logger.error(f"Database connection test failed: {e}")
+            return {
+                'status': 'error',
+                'message': 'Database connection failed',
+                'error': str(e),
+                'database_url': get_db_url().split('@')[0] + '@***'  # Hide credentials
+            }, 500
     
     # Simple test route to verify routing works
     @app.route('/api/test')
