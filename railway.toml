@@ -1,5 +1,33 @@
 [build]
-buildCommand = "./build.sh"
+builder = "nixpacks"
+
+[build.nixPacks]
+# Tell Railway this is a Node.js + Python project
+providers = ["node", "python"]
+
+# Build React frontend first
+[[build.nixPacks.phases]]
+name = "frontend_install"
+dependsOn = ["setup"]
+cmds = [
+  "cd frontend",
+  "npm ci"
+]
+
+[[build.nixPacks.phases]]  
+name = "frontend_build"
+dependsOn = ["frontend_install"]
+cmds = [
+  "cd frontend", 
+  "npm run build",
+  "cd .."
+]
+
+# Then install Python dependencies
+[[build.nixPacks.phases]]
+name = "backend_install" 
+dependsOn = ["setup"]
+cmds = ["pip install -r requirements.txt"]
 
 [deploy]
 startCommand = "gunicorn run:app --bind 0.0.0.0:$PORT"
