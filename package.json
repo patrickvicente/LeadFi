@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "start": "gunicorn run:app --bind 0.0.0.0:$PORT"
+  },
   "dependencies": {
     "@fontsource/montserrat": "^5.2.6"
   }

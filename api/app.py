@@ -131,7 +131,7 @@ def create_app():
     @app.route('/static/<path:filename>')
     def serve_static(filename):
         """Serve static files from React build/static directory."""
-        static_dir = '/app/frontend/build/static'
+        static_dir = 'frontend/build/static'
         logger.info(f"Serving static file: {filename} from {static_dir}")
         try:
             return send_from_directory(static_dir, filename)
@@ -139,38 +139,38 @@ def create_app():
             logger.error(f"Static file not found: {filename}")
             return {'error': f'Static file not found: {filename}'}, 404
     
-    # Serve React build assets (favicon, logos, manifest)
+        # Serve React build assets (favicon, logos, manifest)
     @app.route('/favicon.ico')
     def serve_favicon():
         """Serve favicon from React build directory."""
-        return send_from_directory('/app/frontend/build', 'favicon.ico')
+        return send_from_directory('frontend/build', 'favicon.ico')
     
     @app.route('/logo192.png')
     def serve_logo192():
         """Serve logo192 from React build directory."""
-        return send_from_directory('/app/frontend/build', 'logo192.png')
+        return send_from_directory('frontend/build', 'logo192.png')
     
-    @app.route('/logo512.png') 
+    @app.route('/logo512.png')
     def serve_logo512():
         """Serve logo512 from React build directory."""
-        return send_from_directory('/app/frontend/build', 'logo512.png')
+        return send_from_directory('frontend/build', 'logo512.png')
     
     @app.route('/manifest.json')
     def serve_manifest():
-        """Serve manifest from React build directory.""" 
-        return send_from_directory('/app/frontend/build', 'manifest.json')
+        """Serve manifest from React build directory."""
+        return send_from_directory('frontend/build', 'manifest.json')
     
     @app.route('/robots.txt')
     def serve_robots():
         """Serve robots.txt from React build directory."""
-        return send_from_directory('/app/frontend/build', 'robots.txt')
+        return send_from_directory('frontend/build', 'robots.txt')
     
     # Simple test route to verify file serving works
     @app.route('/api/debug/test-index')
     def test_index():
         """Test serving index.html directly."""
         try:
-            return send_from_directory('/app/frontend/build', 'index.html')
+            return send_from_directory('frontend/build', 'index.html')
         except Exception as e:
             return {'error': f'Failed to serve index.html: {str(e)}'}, 500
     
@@ -179,8 +179,8 @@ def create_app():
     def test_static():
         """Test static file accessibility."""
         import glob
-        build_dir = '/app/frontend/build'
-        static_dir = '/app/frontend/build/static'
+        build_dir = 'frontend/build'
+        static_dir = 'frontend/build/static'
         
         try:
             # Check if directories exist
@@ -281,7 +281,7 @@ def create_app():
             from flask import abort
             abort(404)
             
-        build_dir = '/app/frontend/build'
+        build_dir = 'frontend/build'
         logger.info(f"Frontend request: path='{path}'")
         
         # Root path - serve index.html
