@@ -129,6 +129,15 @@ def create_app():
             logger.error(f"Static file not found: {filename}")
             return {'error': f'Static file not found: {filename}'}, 404
     
+    # Simple test route to verify file serving works
+    @app.route('/api/debug/test-index')
+    def test_index():
+        """Test serving index.html directly."""
+        try:
+            return send_from_directory('/app/frontend/build', 'index.html')
+        except Exception as e:
+            return {'error': f'Failed to serve index.html: {str(e)}'}, 500
+    
     # Debug endpoint to check file structure
     @app.route('/api/debug/files')
     def debug_files():
@@ -186,58 +195,43 @@ def create_app():
     api.add_resource(TradingVolumeTimeSeriesResource, '/api/trading-volume-time-series')
     api.add_resource(TradingVolumeTopCustomersResource, '/api/analytics/trading-volume-top-customers')
     
-    # Serve React app in production
+    # Serve React app in production - simplified version
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react_app(path):
-        # Check if it's an API request (these should return 404 if not found)
+        # Skip API requests
         if path.startswith('api/'):
             return {'error': 'API endpoint not found'}, 404
             
-        # Build directory path - we know this works from debug endpoint
         build_dir = '/app/frontend/build'
+        logger.info(f"Frontend request: path='{path}'")
         
-        # Log the request for debugging
-        logger.info(f"Serving request for path: '{path}' from {build_dir}")
-        
-        # Handle root path
+        # Root path - serve index.html
         if path == '' or path == '/':
-            file_path = 'index.html'
-        else:
-            file_path = path
-            
-        # Full path to requested file
-        full_path = os.path.join(build_dir, file_path)
-        logger.info(f"Looking for file: {full_path}")
-        
-        # Try to serve the specific file if it exists
-        if os.path.exists(full_path) and os.path.isfile(full_path):
-            logger.info(f"Serving file: {full_path}")
-            try:
-                return send_from_directory(build_dir, file_path)
-            except Exception as e:
-                logger.error(f"Error serving {file_path}: {e}")
-                return {'error': f'Error serving file: {str(e)}'}, 500
-        
-        # If file doesn't exist, check if it's a directory request (serve index.html)
-        if os.path.exists(os.path.join(build_dir, file_path)) and os.path.isdir(os.path.join(build_dir, file_path)):
-            try:
-                return send_from_directory(os.path.join(build_dir, file_path), 'index.html')
-            except FileNotFoundError:
-                pass
-        
-        # For SPA routing, serve index.html for unmatched routes (client-side routing)
-        index_path = os.path.join(build_dir, 'index.html')
-        if os.path.exists(index_path):
-            logger.info(f"Serving index.html for SPA route: {path}")
+            logger.info("Serving index.html for root path")
             try:
                 return send_from_directory(build_dir, 'index.html')
             except Exception as e:
                 logger.error(f"Error serving index.html: {e}")
                 return {'error': f'Error serving index.html: {str(e)}'}, 500
-        else:
-            logger.error(f"index.html not found at {index_path}")
-            return {'error': 'index.html not found'}, 404
+        
+        # Try to serve the requested file
+        file_path = os.path.join(build_dir, path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            logger.info(f"Serving file: {path}")
+            try:
+                return send_from_directory(build_dir, path)
+            except Exception as e:
+                logger.error(f"Error serving {path}: {e}")
+                return {'error': f'Error serving {path}: {str(e)}'}, 500
+        
+        # File not found - serve index.html for SPA routing
+        logger.info(f"File not found, serving index.html for SPA route: {path}")
+        try:
+            return send_from_directory(build_dir, 'index.html')
+        except Exception as e:
+            logger.error(f"Error serving index.html fallback: {e}")
+            return {'error': f'Error serving index.html: {str(e)}'}, 500
     
     logger.info("LeadFi API initialized successfully")
     return app
