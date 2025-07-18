@@ -368,8 +368,9 @@ def create_app():
             from flask import abort
             abort(404)
             
-        build_dir = '/app/frontend/build'
-        logger.info(f"Frontend request: path='{path}'")
+        # Dynamic build directory - works locally and on Railway
+        build_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend', 'build')
+        logger.info(f"Frontend request: path='{path}', build_dir='{build_dir}'")
         
         # Root path - serve index.html
         if path == '' or path == '/':
