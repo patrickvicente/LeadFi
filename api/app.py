@@ -357,47 +357,123 @@ def create_app():
     api.add_resource(TradingVolumeTimeSeriesResource, '/api/trading-volume-time-series')
     api.add_resource(TradingVolumeTopCustomersResource, '/api/analytics/trading-volume-top-customers')
     
-    # Serve React app in production - simplified version  
+    # Dedicated route for static files (before catch-all route)
+    @app.route('/static/<path:filename>')
+    def serve_static_files(filename):
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        static_dir = os.path.join(project_root, 'frontend', 'build', 'static')
+        static_path = os.path.join(static_dir, filename)
+        
+        logger.info(f"Static file request: {filename}")
+        logger.info(f"Looking for: {static_path}")
+        logger.info(f"File exists: {os.path.exists(static_path)}")
+        
+        if os.path.exists(static_path) and os.path.isfile(static_path):
+            try:
+                with open(static_path, 'rb') as f:
+                    file_content = f.read()
+                
+                # Determine content type
+                content_type = 'text/plain'
+                if filename.endswith('.js'):
+                    content_type = 'application/javascript'
+                elif filename.endswith('.css'):
+                    content_type = 'text/css'
+                elif filename.endswith('.map'):
+                    content_type = 'application/json'
+                
+                from flask import Response
+                return Response(file_content, mimetype=content_type)
+                
+            except Exception as e:
+                logger.error(f"Error serving static file {filename}: {e}")
+                return {'error': f'Error serving {filename}: {str(e)}'}, 500
+        else:
+            logger.error(f"Static file not found: {static_path}")
+            return {'error': 'Static file not found'}, 404
+    
+    # Serve React app in production  
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react_app(path):
         # Skip ALL API requests - let Flask handle them through specific routes
         if path.startswith('api/'):
-            # This should not happen if routes are registered correctly
-            # Let Flask's 404 handler take over
             from flask import abort
             abort(404)
             
-        # Dynamic build directory - works locally and on Railway
-        build_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend', 'build')
-        logger.info(f"Frontend request: path='{path}', build_dir='{build_dir}'")
+        # Get build directory - use absolute path resolution
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        build_dir = os.path.join(project_root, 'frontend', 'build')
+        
+        logger.info(f"Frontend request: path='{path}'")
+        logger.info(f"Build directory: {build_dir}")
+        logger.info(f"Build dir exists: {os.path.exists(build_dir)}")
+        
+        # Ensure build directory exists
+        if not os.path.exists(build_dir):
+            logger.error(f"Build directory not found: {build_dir}")
+            return {'error': 'Frontend build not found. Run: cd frontend && npm run build'}, 500
         
         # Root path - serve index.html
         if path == '' or path == '/':
-            logger.info("Serving index.html for root path")
-            try:
-                return send_from_directory(build_dir, 'index.html')
-            except Exception as e:
-                logger.error(f"Error serving index.html: {e}")
-                return {'error': f'Error serving index.html: {str(e)}'}, 500
+            index_path = os.path.join(build_dir, 'index.html')
+            logger.info(f"Serving index.html: {index_path}")
+            if os.path.exists(index_path):
+                try:
+                    with open(index_path, 'r') as f:
+                        return f.read(), 200, {'Content-Type': 'text/html'}
+                except Exception as e:
+                    logger.error(f"Error reading index.html: {e}")
+                    return {'error': f'Error reading index.html: {str(e)}'}, 500
+            else:
+                logger.error(f"index.html not found at {index_path}")
+                return {'error': 'index.html not found'}, 404
         
         # Try to serve the requested file
         file_path = os.path.join(build_dir, path)
+        logger.info(f"Checking file: {file_path}")
+        
         if os.path.exists(file_path) and os.path.isfile(file_path):
             logger.info(f"Serving file: {path}")
             try:
-                return send_from_directory(build_dir, path)
+                # Read and serve file directly to avoid send_from_directory issues
+                with open(file_path, 'rb') as f:
+                    file_content = f.read()
+                
+                # Determine content type
+                content_type = 'text/plain'
+                if path.endswith('.js'):
+                    content_type = 'application/javascript'
+                elif path.endswith('.css'):
+                    content_type = 'text/css'
+                elif path.endswith('.html'):
+                    content_type = 'text/html'
+                elif path.endswith('.png'):
+                    content_type = 'image/png'
+                elif path.endswith('.ico'):
+                    content_type = 'image/x-icon'
+                elif path.endswith('.json'):
+                    content_type = 'application/json'
+                
+                from flask import Response
+                return Response(file_content, mimetype=content_type)
+                
             except Exception as e:
                 logger.error(f"Error serving {path}: {e}")
                 return {'error': f'Error serving {path}: {str(e)}'}, 500
         
-        # File not found - serve index.html for SPA routing
+        # File not found - serve index.html for SPA routing (React Router)
         logger.info(f"File not found, serving index.html for SPA route: {path}")
-        try:
-            return send_from_directory(build_dir, 'index.html')
-        except Exception as e:
-            logger.error(f"Error serving index.html fallback: {e}")
-            return {'error': f'Error serving index.html: {str(e)}'}, 500
+        index_path = os.path.join(build_dir, 'index.html')
+        if os.path.exists(index_path):
+            try:
+                with open(index_path, 'r') as f:
+                    return f.read(), 200, {'Content-Type': 'text/html'}
+            except Exception as e:
+                logger.error(f"Error reading index.html fallback: {e}")
+                return {'error': f'Error reading index.html: {str(e)}'}, 500
+        else:
+            return {'error': 'Frontend not found'}, 404
     
     logger.info("LeadFi API initialized successfully")
     return app
