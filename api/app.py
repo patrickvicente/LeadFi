@@ -117,6 +117,16 @@ def create_app():
             'message': 'LeadFi API is running'
         }
     
+    # Simple test route to verify routing works
+    @app.route('/api/test')
+    def simple_test():
+        """Simple test route to verify Flask routing works."""
+        return {
+            'status': 'success',
+            'message': 'Flask routing is working!',
+            'route': '/api/test'
+        }
+    
     # Serve static files (CSS, JS) from React build
     @app.route('/static/<path:filename>')
     def serve_static(filename):
@@ -260,13 +270,16 @@ def create_app():
     api.add_resource(TradingVolumeTimeSeriesResource, '/api/trading-volume-time-series')
     api.add_resource(TradingVolumeTopCustomersResource, '/api/analytics/trading-volume-top-customers')
     
-    # Serve React app in production - simplified version
+    # Serve React app in production - simplified version  
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react_app(path):
-        # Skip API requests
+        # Skip ALL API requests - let Flask handle them through specific routes
         if path.startswith('api/'):
-            return {'error': 'API endpoint not found'}, 404
+            # This should not happen if routes are registered correctly
+            # Let Flask's 404 handler take over
+            from flask import abort
+            abort(404)
             
         build_dir = '/app/frontend/build'
         logger.info(f"Frontend request: path='{path}'")
