@@ -245,6 +245,49 @@ def create_app():
             
         return debug_info
     
+    # Debug route to inspect current environment
+    @app.route('/api/debug/environment')
+    def debug_environment():
+        """Debug the current working directory and file structure."""
+        import glob
+        try:
+            debug_info = {
+                'current_working_directory': os.getcwd(),
+                'directory_contents': [],
+                'frontend_exists': False,
+                'frontend_build_exists': False,
+                'frontend_build_contents': [],
+                'react_build_files': {
+                    'index_html_exists': False,
+                    'static_dir_exists': False,
+                    'static_contents': []
+                }
+            }
+            
+            # Check current directory contents
+            debug_info['directory_contents'] = os.listdir('.')
+            
+            # Check if frontend directory exists
+            if os.path.exists('frontend'):
+                debug_info['frontend_exists'] = True
+                
+                # Check if frontend/build exists
+                if os.path.exists('frontend/build'):
+                    debug_info['frontend_build_exists'] = True
+                    debug_info['frontend_build_contents'] = os.listdir('frontend/build')
+                    
+                    # Check specific React build files
+                    debug_info['react_build_files']['index_html_exists'] = os.path.exists('frontend/build/index.html')
+                    
+                    if os.path.exists('frontend/build/static'):
+                        debug_info['react_build_files']['static_dir_exists'] = True
+                        debug_info['react_build_files']['static_contents'] = os.listdir('frontend/build/static')
+            
+            return debug_info
+            
+        except Exception as e:
+            return {'error': f'Debug failed: {str(e)}'}, 500
+    
     # Register resources
     api.add_resource(LeadResource, '/api/leads', '/api/leads/<int:id>')
     api.add_resource(CustomerResource, '/api/customers', '/api/customers/<string:customer_uid>')
