@@ -142,6 +142,26 @@ def create_app():
     api.add_resource(TradingVolumeTimeSeriesResource, '/api/trading-volume-time-series')
     api.add_resource(TradingVolumeTopCustomersResource, '/api/analytics/trading-volume-top-customers')
     
+    # Serve React app in production
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve_react_app(path):
+        # Check if it's an API request (these should return 404 if not found)
+        if path.startswith('api/'):
+            return {'error': 'API endpoint not found'}, 404
+            
+        # Serve static files if they exist
+        static_file_path = os.path.join('frontend/build', path)
+        if os.path.exists(static_file_path) and os.path.isfile(static_file_path):
+            return app.send_static_file(f'../frontend/build/{path}')
+        
+        # For all other routes, serve the React index.html (SPA routing)
+        index_path = os.path.join('frontend/build', 'index.html')
+        if os.path.exists(index_path):
+            return app.send_static_file('../frontend/build/index.html')
+        else:
+            return {'error': 'Frontend not built. Run: cd frontend && npm run build'}, 500
+    
     logger.info("LeadFi API initialized successfully")
     return app
 

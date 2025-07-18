@@ -2,9 +2,19 @@
 import axios from 'axios';
 import errorService from './errorService';
 
+// Get API base URL based on environment
+const getApiBaseUrl = () => {
+  // In production, use relative path (same domain)
+  if (process.env.NODE_ENV === 'production') {
+    return '/api';
+  }
+  // In development, use local backend
+  return process.env.REACT_APP_API_URL || 'http://127.0.0.1:5000/api';
+};
+
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:5000/api', // Update with your actual API URL
+  baseURL: getApiBaseUrl(),
   timeout: 30000, // 30 seconds
   headers: {
     'Content-Type': 'application/json'
