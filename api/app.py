@@ -129,6 +129,32 @@ def create_app():
             logger.error(f"Static file not found: {filename}")
             return {'error': f'Static file not found: {filename}'}, 404
     
+    # Serve React build assets (favicon, logos, manifest)
+    @app.route('/favicon.ico')
+    def serve_favicon():
+        """Serve favicon from React build directory."""
+        return send_from_directory('/app/frontend/build', 'favicon.ico')
+    
+    @app.route('/logo192.png')
+    def serve_logo192():
+        """Serve logo192 from React build directory."""
+        return send_from_directory('/app/frontend/build', 'logo192.png')
+    
+    @app.route('/logo512.png') 
+    def serve_logo512():
+        """Serve logo512 from React build directory."""
+        return send_from_directory('/app/frontend/build', 'logo512.png')
+    
+    @app.route('/manifest.json')
+    def serve_manifest():
+        """Serve manifest from React build directory.""" 
+        return send_from_directory('/app/frontend/build', 'manifest.json')
+    
+    @app.route('/robots.txt')
+    def serve_robots():
+        """Serve robots.txt from React build directory."""
+        return send_from_directory('/app/frontend/build', 'robots.txt')
+    
     # Simple test route to verify file serving works
     @app.route('/api/debug/test-index')
     def test_index():
@@ -137,6 +163,45 @@ def create_app():
             return send_from_directory('/app/frontend/build', 'index.html')
         except Exception as e:
             return {'error': f'Failed to serve index.html: {str(e)}'}, 500
+    
+    # Debug route to test static files
+    @app.route('/api/debug/test-static')
+    def test_static():
+        """Test static file accessibility."""
+        import glob
+        build_dir = '/app/frontend/build'
+        static_dir = '/app/frontend/build/static'
+        
+        try:
+            # Check if directories exist
+            debug_info = {
+                'build_dir_exists': os.path.exists(build_dir),
+                'static_dir_exists': os.path.exists(static_dir),
+                'build_contents': [],
+                'static_contents': [],
+                'js_files': [],
+                'css_files': []
+            }
+            
+            if os.path.exists(build_dir):
+                debug_info['build_contents'] = os.listdir(build_dir)
+                
+            if os.path.exists(static_dir):
+                debug_info['static_contents'] = os.listdir(static_dir)
+                
+                # Check for JS and CSS files
+                js_dir = os.path.join(static_dir, 'js')
+                css_dir = os.path.join(static_dir, 'css')
+                
+                if os.path.exists(js_dir):
+                    debug_info['js_files'] = os.listdir(js_dir)
+                if os.path.exists(css_dir):
+                    debug_info['css_files'] = os.listdir(css_dir)
+                    
+            return debug_info
+            
+        except Exception as e:
+            return {'error': f'Debug failed: {str(e)}'}, 500
     
     # Debug endpoint to check file structure
     @app.route('/api/debug/files')
