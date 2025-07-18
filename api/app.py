@@ -164,6 +164,27 @@ def create_app():
         except Exception as e:
             return {'error': f'Failed to serve index.html: {str(e)}'}, 500
     
+    # Simple test route for static
+    @app.route('/test-static')
+    def test_static_route():
+        """Test if routes are working."""
+        return {'message': 'Static route test working!'}
+
+    # Debug route to check working directory
+    @app.route('/api/debug/cwd')
+    def debug_cwd():
+        """Check current working directory and paths."""
+        import os
+        cwd = os.getcwd()
+        return {
+            'current_working_directory': cwd,
+            'static_path_attempt': os.path.join(cwd, 'frontend', 'build', 'static'),
+            'static_exists': os.path.exists(os.path.join(cwd, 'frontend', 'build', 'static')),
+            'frontend_exists': os.path.exists(os.path.join(cwd, 'frontend')),
+            'build_exists': os.path.exists(os.path.join(cwd, 'frontend', 'build')),
+            'files_in_cwd': os.listdir(cwd) if os.path.exists(cwd) else []
+        }
+
     # Debug route to test static files
     @app.route('/api/debug/test-static')
     def test_static():
@@ -358,39 +379,67 @@ def create_app():
     @app.route('/static/<path:filename>')
     def serve_static_files(filename):
         """Serve static files - simple bulletproof version."""
+        logger.info("=== STATIC ROUTE HIT ===")
+        return f"Static route called with filename: {filename}"
+    
+    # Alternative static route with more explicit pattern
+    @app.route('/static/js/<filename>')
+    def serve_js_files(filename):
+        """Serve JS files specifically."""
+        logger.info(f"=== JS ROUTE HIT with {filename} ===")
+        from flask import send_from_directory
+        import os
+        
+        js_dir = os.path.join(os.getcwd(), 'frontend', 'build', 'static', 'js')
+        logger.info(f"Serving from: {js_dir}")
+        return send_from_directory(js_dir, filename)
+    
+    @app.route('/static/css/<filename>')
+    def serve_css_files(filename):
+        """Serve CSS files specifically."""
+        logger.info(f"=== CSS ROUTE HIT with {filename} ===")
+        from flask import send_from_directory
+        import os
+        
+        css_dir = os.path.join(os.getcwd(), 'frontend', 'build', 'static', 'css')
+        return send_from_directory(css_dir, filename)
+    
+    # Original static function (renamed to avoid conflict)
+    def original_serve_static_files(filename):
+        """Serve static files - simple bulletproof version."""
+        logger.info(f"Serving static file: {filename}")
         try:
             # Railway uses /app as working directory
             if os.path.exists('/app/frontend/build/static'):
                 static_dir = '/app/frontend/build/static'
+                logger.info(f"Using production static dir: {static_dir}")
             else:
                 # Local development
                 static_dir = os.path.join(os.getcwd(), 'frontend', 'build', 'static')
+                logger.info(f"Using local static dir: {static_dir}")
             
             file_path = os.path.join(static_dir, filename)
+            logger.info(f"Looking for file at: {file_path}")
             
             if not os.path.exists(file_path):
                 logger.error(f"Static file not found: {file_path}")
+                logger.error(f"Directory contents: {os.listdir(static_dir) if os.path.exists(static_dir) else 'Dir does not exist'}")
                 from flask import abort
                 abort(404)
                 
-            # Read file
-            with open(file_path, 'rb') as f:
-                content = f.read()
+            logger.info(f"File found, serving: {file_path}")
             
-            # Simple content type detection
-            if filename.endswith('.js'):
-                mimetype = 'application/javascript'
-            elif filename.endswith('.css'):
-                mimetype = 'text/css'
-            else:
-                mimetype = 'application/octet-stream'
+            # Use Flask's send_from_directory for better handling
+            from flask import send_from_directory
+            directory = os.path.dirname(file_path)
+            filename_only = os.path.basename(file_path)
             
-            # Return response
-            from flask import Response
-            return Response(content, mimetype=mimetype)
+            return send_from_directory(directory, filename_only)
             
         except Exception as e:
             logger.error(f"Error serving static file {filename}: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             from flask import abort
             abort(500)
     

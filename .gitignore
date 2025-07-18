@@ -60,3 +60,7 @@ venv/
 
 # notes
 /docs/roadmap.md
+
+# Local development testing files
+dev_testing/
+*.db
