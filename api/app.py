@@ -117,6 +117,38 @@ def create_app():
             'message': 'LeadFi API is running'
         }
     
+    # Debug endpoint to check file structure
+    @app.route('/api/debug/files')
+    def debug_files():
+        """Debug endpoint to check file structure in container."""
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        app_root = os.path.dirname(current_dir)
+        
+        debug_info = {
+            'current_file': __file__,
+            'current_dir': current_dir,
+            'app_root': app_root,
+            'app_root_contents': os.listdir(app_root) if os.path.exists(app_root) else 'Not found',
+        }
+        
+        # Check for frontend directory
+        frontend_dir = os.path.join(app_root, 'frontend')
+        if os.path.exists(frontend_dir):
+            debug_info['frontend_dir'] = frontend_dir
+            debug_info['frontend_contents'] = os.listdir(frontend_dir)
+            
+            # Check for build directory
+            build_dir = os.path.join(frontend_dir, 'build')
+            if os.path.exists(build_dir):
+                debug_info['build_dir'] = build_dir
+                debug_info['build_contents'] = os.listdir(build_dir)
+            else:
+                debug_info['build_dir'] = 'Not found'
+        else:
+            debug_info['frontend_dir'] = 'Not found'
+            
+        return debug_info
+    
     # Register resources
     api.add_resource(LeadResource, '/api/leads', '/api/leads/<int:id>')
     api.add_resource(CustomerResource, '/api/customers', '/api/customers/<string:customer_uid>')
@@ -150,8 +182,19 @@ def create_app():
         if path.startswith('api/'):
             return {'error': 'API endpoint not found'}, 404
             
-        # Build directory path
-        build_dir = os.path.join(os.path.dirname(app.root_path), 'frontend', 'build')
+        # Build directory path - more robust for Docker container
+        # In Docker: /app/frontend/build/
+        current_dir = os.path.dirname(os.path.abspath(__file__))  # /app/api
+        app_root = os.path.dirname(current_dir)  # /app
+        build_dir = os.path.join(app_root, 'frontend', 'build')
+        
+        # Debug logging
+        logger.info(f"Current dir: {current_dir}")
+        logger.info(f"App root: {app_root}")
+        logger.info(f"Build dir: {build_dir}")
+        logger.info(f"Build dir exists: {os.path.exists(build_dir)}")
+        if os.path.exists(build_dir):
+            logger.info(f"Build dir contents: {os.listdir(build_dir)}")
         
         # Handle empty path (serve index.html)
         if path == '':
