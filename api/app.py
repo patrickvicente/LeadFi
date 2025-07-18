@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, send_from_directory
 from flask_restful import Api
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -150,17 +150,22 @@ def create_app():
         if path.startswith('api/'):
             return {'error': 'API endpoint not found'}, 404
             
-        # Serve static files if they exist
-        static_file_path = os.path.join('frontend/build', path)
-        if os.path.exists(static_file_path) and os.path.isfile(static_file_path):
-            return app.send_static_file(f'../frontend/build/{path}')
+        # Build directory path
+        build_dir = os.path.join(os.path.dirname(app.root_path), 'frontend', 'build')
         
-        # For all other routes, serve the React index.html (SPA routing)
-        index_path = os.path.join('frontend/build', 'index.html')
-        if os.path.exists(index_path):
-            return app.send_static_file('../frontend/build/index.html')
-        else:
-            return {'error': 'Frontend not built. Run: cd frontend && npm run build'}, 500
+        # Handle empty path (serve index.html)
+        if path == '':
+            path = 'index.html'
+            
+        # Try to serve the requested file
+        try:
+            return send_from_directory(build_dir, path)
+        except FileNotFoundError:
+            # For SPA routing, serve index.html for unmatched routes
+            try:
+                return send_from_directory(build_dir, 'index.html')
+            except FileNotFoundError:
+                return {'error': 'Frontend build files not found. Check Docker build process.'}, 500
     
     logger.info("LeadFi API initialized successfully")
     return app

@@ -36,8 +36,12 @@ RUN npm run build
 # Go back to app directory
 WORKDIR /app
 
-# Copy the rest of the application code
-COPY . .
+# Copy the rest of the application code (but exclude frontend to preserve build)
+COPY api/ api/
+COPY db/ db/
+COPY etl/ etl/
+COPY run.py .
+COPY requirements.txt .
 
 # Expose port
 EXPOSE 8080
