@@ -304,6 +304,31 @@ def create_app():
         except Exception as e:
             return {'error': f'Failed to serve JS: {str(e)}'}, 500
     
+    # Debug route to test static file serving locally
+    @app.route('/api/debug/test-static-simple')
+    def test_static_simple():
+        """Simple test to check if we can read the JS file directly."""
+        filename = 'js/main.397e99f4.js'
+        possible_dirs = [
+            '/app/frontend/build/static',
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend', 'build', 'static'),
+            os.path.join(os.getcwd(), 'frontend', 'build', 'static')
+        ]
+        
+        result = {"filename": filename, "attempts": []}
+        
+        for dir_path in possible_dirs:
+            full_path = os.path.join(dir_path, filename)
+            exists = os.path.exists(full_path)
+            result["attempts"].append({
+                "dir": dir_path,
+                "full_path": full_path,
+                "exists": exists,
+                "is_file": os.path.isfile(full_path) if exists else False
+            })
+            
+        return result
+    
     # Register resources
     api.add_resource(LeadResource, '/api/leads', '/api/leads/<int:id>')
     api.add_resource(CustomerResource, '/api/customers', '/api/customers/<string:customer_uid>')
@@ -329,68 +354,45 @@ def create_app():
     api.add_resource(TradingVolumeTimeSeriesResource, '/api/trading-volume-time-series')
     api.add_resource(TradingVolumeTopCustomersResource, '/api/analytics/trading-volume-top-customers')
     
-    # Static files route (MUST be before catch-all route)
+    # BULLETPROOF Static files route - simple and direct
     @app.route('/static/<path:filename>')
     def serve_static_files(filename):
-        """Serve static files from React build/static directory - works locally and on Railway."""
-        
-        # Try multiple possible locations for static files
-        possible_dirs = [
-            # Railway path
-            '/app/frontend/build/static',
-            # Local development path (relative to project root)
-            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend', 'build', 'static'),
-            # Alternative local path
-            os.path.join(os.getcwd(), 'frontend', 'build', 'static')
-        ]
-        
-        logger.info(f"Static file request: {filename}")
-        
-        static_path = None
-        static_dir = None
-        
-        # Find the first existing directory
-        for potential_dir in possible_dirs:
-            potential_path = os.path.join(potential_dir, filename)
-            logger.info(f"Trying: {potential_path}")
+        """Serve static files - simple bulletproof version."""
+        try:
+            # Railway uses /app as working directory
+            if os.path.exists('/app/frontend/build/static'):
+                static_dir = '/app/frontend/build/static'
+            else:
+                # Local development
+                static_dir = os.path.join(os.getcwd(), 'frontend', 'build', 'static')
             
-            if os.path.exists(potential_path) and os.path.isfile(potential_path):
-                static_path = potential_path
-                static_dir = potential_dir
-                logger.info(f"Found static file at: {static_path}")
-                break
-        
-        if static_path and os.path.isfile(static_path):
-            try:
-                with open(static_path, 'rb') as f:
-                    file_content = f.read()
+            file_path = os.path.join(static_dir, filename)
+            
+            if not os.path.exists(file_path):
+                logger.error(f"Static file not found: {file_path}")
+                from flask import abort
+                abort(404)
                 
-                # Determine content type
-                content_type = 'text/plain'
-                if filename.endswith('.js'):
-                    content_type = 'application/javascript'
-                elif filename.endswith('.css'):
-                    content_type = 'text/css'
-                elif filename.endswith('.map'):
-                    content_type = 'application/json'
-                elif filename.endswith('.png'):
-                    content_type = 'image/png'
-                elif filename.endswith('.woff2'):
-                    content_type = 'font/woff2'
-                elif filename.endswith('.woff'):
-                    content_type = 'font/woff'
-                
-                from flask import Response
-                logger.info(f"Serving {filename} ({len(file_content)} bytes) as {content_type}")
-                return Response(file_content, mimetype=content_type)
-                
-            except Exception as e:
-                logger.error(f"Error reading static file {filename}: {e}")
-                return {'error': f'Error reading {filename}: {str(e)}'}, 500
-        else:
-            logger.error(f"Static file not found: {filename}")
-            logger.error(f"Searched in: {possible_dirs}")
-            return {'error': 'Static file not found'}, 404
+            # Read file
+            with open(file_path, 'rb') as f:
+                content = f.read()
+            
+            # Simple content type detection
+            if filename.endswith('.js'):
+                mimetype = 'application/javascript'
+            elif filename.endswith('.css'):
+                mimetype = 'text/css'
+            else:
+                mimetype = 'application/octet-stream'
+            
+            # Return response
+            from flask import Response
+            return Response(content, mimetype=mimetype)
+            
+        except Exception as e:
+            logger.error(f"Error serving static file {filename}: {e}")
+            from flask import abort
+            abort(500)
     
     # Serve React app in production  
     @app.route('/', defaults={'path': ''})
