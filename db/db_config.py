@@ -35,13 +35,18 @@ def get_db_url():
 # Create single engine instance
 engine = create_engine(get_db_url())
 
-# Test the connection
-try:
-    with engine.connect() as conn:
-        logger.info("Successfully connected to the database!")
-except Exception as e:
-    logger.error(f"Failed to connect to the database: {e}")
-    raise
+# Test the connection (only in development)
+if os.getenv("FLASK_ENV") != "production":
+    try:
+        with engine.connect() as conn:
+            logger.info("Successfully connected to the database!")
+    except Exception as e:
+        logger.error(f"Failed to connect to the database: {e}")
+        # Don't raise in production to allow app to start
+        if os.getenv("FLASK_ENV") == "development":
+            raise
+else:
+    logger.info("Skipping database connection test in production")
 
 # Initialize Flask-SQLAlchemy with the same URL
 # db.init_app(None)  # You'll need to pass your Flask app here if you have one
