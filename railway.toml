@@ -1,8 +1,0 @@
-[build]
-buildCommand = "./build.sh"
-
-[deploy]
-startCommand = "gunicorn run:app --bind 0.0.0.0:$PORT"
-healthcheckPath = "/api/health"
-healthcheckTimeout = 100
-restartPolicyType = "on_failure" 

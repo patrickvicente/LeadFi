@@ -31,7 +31,7 @@ venv/
 /frontend/.pnp
 /frontend/.pnp.js
 /frontend/coverage
-/frontend/build
+# /frontend/build  # Allow build files for deployment
 /frontend/.DS_Store
 /frontend/.env.local
 /frontend/.env.development.local
