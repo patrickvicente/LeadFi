@@ -127,35 +127,7 @@ def create_app():
             'route': '/api/test'
         }
     
-        # Serve static files (CSS, JS) from React build
-    @app.route('/static/<path:filename>')
-    def serve_static(filename):
-        """Serve static files from React build/static directory."""
-        static_dir = '/app/frontend/build/static'
-        logger.info(f"Serving static file: {filename} from {static_dir}")
-        try:
-            from flask import make_response
-            response = make_response(send_from_directory(static_dir, filename))
-            
-            # Set proper MIME types for different file types
-            if filename.endswith('.js'):
-                response.headers['Content-Type'] = 'application/javascript'
-            elif filename.endswith('.css'):
-                response.headers['Content-Type'] = 'text/css'
-            elif filename.endswith('.woff2'):
-                response.headers['Content-Type'] = 'font/woff2'
-            elif filename.endswith('.woff'):
-                response.headers['Content-Type'] = 'font/woff'
-                
-            return response
-        except FileNotFoundError:
-            logger.error(f"Static file not found: {filename}")
-            from flask import abort
-            abort(404)
-        except Exception as e:
-            logger.error(f"Error serving static file {filename}: {e}")
-            from flask import abort
-            abort(500)
+        # REMOVED DUPLICATE STATIC ROUTE - consolidated below
 
     # Serve React build assets (favicon, logos, manifest)
     @app.route('/favicon.ico')
@@ -357,18 +329,38 @@ def create_app():
     api.add_resource(TradingVolumeTimeSeriesResource, '/api/trading-volume-time-series')
     api.add_resource(TradingVolumeTopCustomersResource, '/api/analytics/trading-volume-top-customers')
     
-    # Dedicated route for static files (before catch-all route)
+    # Static files route (MUST be before catch-all route)
     @app.route('/static/<path:filename>')
     def serve_static_files(filename):
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        static_dir = os.path.join(project_root, 'frontend', 'build', 'static')
-        static_path = os.path.join(static_dir, filename)
+        """Serve static files from React build/static directory - works locally and on Railway."""
+        
+        # Try multiple possible locations for static files
+        possible_dirs = [
+            # Railway path
+            '/app/frontend/build/static',
+            # Local development path (relative to project root)
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend', 'build', 'static'),
+            # Alternative local path
+            os.path.join(os.getcwd(), 'frontend', 'build', 'static')
+        ]
         
         logger.info(f"Static file request: {filename}")
-        logger.info(f"Looking for: {static_path}")
-        logger.info(f"File exists: {os.path.exists(static_path)}")
         
-        if os.path.exists(static_path) and os.path.isfile(static_path):
+        static_path = None
+        static_dir = None
+        
+        # Find the first existing directory
+        for potential_dir in possible_dirs:
+            potential_path = os.path.join(potential_dir, filename)
+            logger.info(f"Trying: {potential_path}")
+            
+            if os.path.exists(potential_path) and os.path.isfile(potential_path):
+                static_path = potential_path
+                static_dir = potential_dir
+                logger.info(f"Found static file at: {static_path}")
+                break
+        
+        if static_path and os.path.isfile(static_path):
             try:
                 with open(static_path, 'rb') as f:
                     file_content = f.read()
@@ -381,15 +373,23 @@ def create_app():
                     content_type = 'text/css'
                 elif filename.endswith('.map'):
                     content_type = 'application/json'
+                elif filename.endswith('.png'):
+                    content_type = 'image/png'
+                elif filename.endswith('.woff2'):
+                    content_type = 'font/woff2'
+                elif filename.endswith('.woff'):
+                    content_type = 'font/woff'
                 
                 from flask import Response
+                logger.info(f"Serving {filename} ({len(file_content)} bytes) as {content_type}")
                 return Response(file_content, mimetype=content_type)
                 
             except Exception as e:
-                logger.error(f"Error serving static file {filename}: {e}")
-                return {'error': f'Error serving {filename}: {str(e)}'}, 500
+                logger.error(f"Error reading static file {filename}: {e}")
+                return {'error': f'Error reading {filename}: {str(e)}'}, 500
         else:
-            logger.error(f"Static file not found: {static_path}")
+            logger.error(f"Static file not found: {filename}")
+            logger.error(f"Searched in: {possible_dirs}")
             return {'error': 'Static file not found'}, 404
     
     # Serve React app in production  
