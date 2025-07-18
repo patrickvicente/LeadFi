@@ -14,13 +14,13 @@ load_dotenv()
 # Create SQLAlchemy instance
 db = SQLAlchemy()
 
-# Database configuration
+# Database configuration - uses Railway's standard PostgreSQL environment variables
 DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "localhost"),
-    "port": os.getenv("DB_PORT", "5432"),
-    "database": os.getenv("DB_NAME", "leadfi_db"),
-    "user": os.getenv("DB_USER", "patrickvicente"),     
-    "password": os.getenv("DB_PASSWORD", "")  
+    "host": os.getenv("PGHOST", "localhost"),
+    "port": os.getenv("PGPORT", "5432"),
+    "database": os.getenv("PGDATABASE", "leadfi_db"),
+    "user": os.getenv("PGUSER", "patrickvicente"),     
+    "password": os.getenv("POSTGRES_PASSWORD", "")  
 }
 
 # Log the configuration (without password)
