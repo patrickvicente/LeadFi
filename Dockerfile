@@ -25,6 +25,9 @@ COPY frontend/package*.json frontend/
 WORKDIR /app/frontend
 RUN npm install --only=production
 
+# Copy frontend source code (needed for build)
+COPY frontend/ .
+
 # Build React frontend (ignore ESLint warnings in production)
 ENV CI=false
 ENV GENERATE_SOURCEMAP=false
