@@ -25,7 +25,9 @@ COPY frontend/package*.json frontend/
 WORKDIR /app/frontend
 RUN npm install --only=production
 
-# Build React frontend
+# Build React frontend (ignore ESLint warnings in production)
+ENV CI=false
+ENV GENERATE_SOURCEMAP=false
 RUN npm run build
 
 # Go back to app directory
