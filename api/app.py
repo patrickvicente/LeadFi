@@ -134,7 +134,20 @@ def create_app():
         static_dir = '/app/frontend/build/static'
         logger.info(f"Serving static file: {filename} from {static_dir}")
         try:
-            return send_from_directory(static_dir, filename)
+            from flask import make_response
+            response = make_response(send_from_directory(static_dir, filename))
+            
+            # Set proper MIME types for different file types
+            if filename.endswith('.js'):
+                response.headers['Content-Type'] = 'application/javascript'
+            elif filename.endswith('.css'):
+                response.headers['Content-Type'] = 'text/css'
+            elif filename.endswith('.woff2'):
+                response.headers['Content-Type'] = 'font/woff2'
+            elif filename.endswith('.woff'):
+                response.headers['Content-Type'] = 'font/woff'
+                
+            return response
         except FileNotFoundError:
             logger.error(f"Static file not found: {filename}")
             from flask import abort
@@ -305,6 +318,19 @@ def create_app():
                 return {'error': f'CSS file not found at {css_file}'}, 404
         except Exception as e:
             return {'error': f'Failed to serve CSS: {str(e)}'}, 500
+    
+    # Debug route to test JS file serving specifically
+    @app.route('/api/debug/test-js')
+    def test_js():
+        """Test serving the specific JS file that's failing."""
+        try:
+            js_file = '/app/frontend/build/static/js/main.397e99f4.js'
+            if os.path.exists(js_file):
+                return send_from_directory('/app/frontend/build/static/js', 'main.397e99f4.js')
+            else:
+                return {'error': f'JS file not found at {js_file}'}, 404
+        except Exception as e:
+            return {'error': f'Failed to serve JS: {str(e)}'}, 500
     
     # Register resources
     api.add_resource(LeadResource, '/api/leads', '/api/leads/<int:id>')
