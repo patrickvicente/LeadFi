@@ -1,5 +1,6 @@
 [build]
-command = "cd frontend && npm install && npm run build && cd .."
+# Use Dockerfile instead of Nixpacks
+builder = "dockerfile"
 
 [deploy]
 healthcheckPath = "/api/health"

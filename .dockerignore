@@ -1,0 +1,48 @@
+# Virtual environment (not needed in container)
+venv/
+env/
+.env
+
+# Node modules (will install fresh in container)
+node_modules/
+frontend/node_modules/
+
+# Build artifacts
+frontend/build/
+*.pyc
+__pycache__/
+
+# Development files
+.git/
+.gitignore
+.DS_Store
+.vscode/
+.cursor/
+
+# Logs and temp files
+logs/
+*.log
+*.tmp
+
+# Documentation (not needed in production)
+docs/
+*.md
+README.md
+
+# Test files
+tests/
+test_*
+*_test.py
+
+# Data files (usually too large)
+data/
+*.csv
+*.xlsx
+
+# Secrets (should use environment variables)
+secrets/
+.env.*
+
+# OS generated files
+Thumbs.db
+.DS_Store 
