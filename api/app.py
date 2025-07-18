@@ -127,7 +127,7 @@ def create_app():
             'route': '/api/test'
         }
     
-    # Serve static files (CSS, JS) from React build
+        # Serve static files (CSS, JS) from React build
     @app.route('/static/<path:filename>')
     def serve_static(filename):
         """Serve static files from React build/static directory."""
@@ -137,9 +137,14 @@ def create_app():
             return send_from_directory(static_dir, filename)
         except FileNotFoundError:
             logger.error(f"Static file not found: {filename}")
-            return {'error': f'Static file not found: {filename}'}, 404
-    
-        # Serve React build assets (favicon, logos, manifest)
+            from flask import abort
+            abort(404)
+        except Exception as e:
+            logger.error(f"Error serving static file {filename}: {e}")
+            from flask import abort
+            abort(500)
+
+    # Serve React build assets (favicon, logos, manifest)
     @app.route('/favicon.ico')
     def serve_favicon():
         """Serve favicon from React build directory."""
@@ -287,6 +292,19 @@ def create_app():
             
         except Exception as e:
             return {'error': f'Debug failed: {str(e)}'}, 500
+    
+    # Debug route to test CSS file serving specifically
+    @app.route('/api/debug/test-css')
+    def test_css():
+        """Test serving the specific CSS file that's failing."""
+        try:
+            css_file = '/app/frontend/build/static/css/main.35f551c3.css'
+            if os.path.exists(css_file):
+                return send_from_directory('/app/frontend/build/static/css', 'main.35f551c3.css')
+            else:
+                return {'error': f'CSS file not found at {css_file}'}, 404
+        except Exception as e:
+            return {'error': f'Failed to serve CSS: {str(e)}'}, 500
     
     # Register resources
     api.add_resource(LeadResource, '/api/leads', '/api/leads/<int:id>')
