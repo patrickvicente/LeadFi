@@ -226,9 +226,12 @@ const ActivityList = ({
   };
 
   // Get activity type label
-  const getActivityTypeLabel = (type) => {
+  const getActivityTypeLabel = (type, category) => {
     const option = activityOptions.allActivityTypes.find(opt => opt.value === type);
-    return option ? option.label : type;
+    if (option) {
+      return option.label;
+    }
+    return type; // Fallback to type if no specific label found
   };
 
   // Get category badge style (dark theme)
@@ -294,10 +297,24 @@ const ActivityList = ({
     }
   };
 
-  if (displayActivities.length === 0 && !displayLoading) {
+  // Loading state
+  if (displayLoading) {
+    return (
+      <div className="bg-background border border-gray-700 rounded-lg p-8 text-center">
+        <div className="flex justify-center items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-highlight1"></div>
+          <span className="ml-3 text-gray-400">Loading activities...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state - only show if not loading and no activities
+  if (!displayLoading && (!displayActivities || displayActivities.length === 0)) {
     return (
       <div className="bg-background border border-gray-700 rounded-lg p-8 text-center">
         <p className="text-gray-400">No activities found.</p>
+        <p className="text-gray-500 text-sm mt-2">Try changing filters or creating a new activity.</p>
       </div>
     );
   }
@@ -424,164 +441,173 @@ const ActivityList = ({
         </div>
       )}
 
-      {/* Activity Table */}
-      <div className="bg-background border border-gray-700 rounded-lg overflow-hidden" style={{ height: '600px', width: '100%' }}>
-        <div className="h-full overflow-auto">
-          <table className="min-w-full divide-y divide-gray-700">
-            <thead className="bg-gray-800 sticky top-0 z-10">
-              <tr>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-700 min-w-[150px]"
-                  onClick={() => handleSort('date_created')}
-                >
-                  Date Created
-                  {getSortIcon('date_created')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px]">
-                  Category
-                </th>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-700 min-w-[120px]"
-                  onClick={() => handleSort('activity_type')}
-                >
-                  Type
-                  {getSortIcon('activity_type')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[200px]">
-                  Description
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[150px]">
-                  Related To
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[100px]">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[100px]">
-                  Priority
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px]">
-                  Created By
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px]">
-                  Assigned To
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[150px]">
-                  Due Date
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[150px]">
-                  Date Completed
-                </th>
-                {showActions && (
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider min-w-[120px]">
-                    Actions
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-700">
-              {displayLoading ? (
-                <tr>
-                  <td colSpan="12" className="px-4 py-8 text-center text-gray-400">
-                    <div className="flex justify-center items-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-highlight1"></div>
-                      <span className="ml-3">Loading activities...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : displayActivities.length === 0 ? (
-                <tr>
-                  <td colSpan="12" className="px-4 py-8 text-center text-gray-400">
-                    No activities found
-                  </td>
-                </tr>
-              ) : (
-                displayActivities.map((activity, index) => (
-                  <tr
-                    key={activity.activity_id}
-                    onClick={() => handleActivityClick(activity.activity_id)}
-                    className={`transition-colors hover:bg-gray-800 cursor-pointer ${
-                      index % 2 === 0 ? 'bg-background' : 'bg-gray-900'
-                    }`}
-                  >
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[150px]">
-                      <div className="truncate" title={formatDate(activity.date_created)}>
-                        {formatDate(activity.date_created)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap min-w-[120px]">
-                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryBadgeStyle(activity.activity_category)}`}>
-                        {activity.activity_category}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[120px]">
-                      <div className="truncate" title={getActivityTypeLabel(activity.activity_type, activity.activity_category)}>
-                        {getActivityTypeLabel(activity.activity_type, activity.activity_category)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-sm text-text min-w-[200px]">
-                      <div className="truncate" title={activity.description}>
-                        {activity.description}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[150px]">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleNavigateToEntity(activity);
-                        }}
-                        className="text-left truncate hover:text-highlight1 transition-colors cursor-pointer"
-                        title={`Navigate to ${activity.related_entity_type}: ${activity.related_entity_name}`}
-                      >
-                        <div className="truncate">
-                          {activity.related_entity_name}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {activity.related_entity_type}
-                        </div>
-                      </button>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap min-w-[100px]">
-                      {activity.status && (
-                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeStyle(activity.status)}`}>
-                          {activity.status}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap min-w-[100px]">
-                      {activity.priority && (
-                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityBadgeStyle(activity.priority)}`}>
-                          {activity.priority}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[120px]">
-                      <div className="truncate" title={activity.created_by}>
-                        {activity.created_by}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[120px]">
-                      <div className="truncate" title={activity.assigned_to}>
-                        {activity.assigned_to}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[150px]">
-                      {activity.due_date && (
-                        <div className={`truncate ${activity.is_overdue ? 'text-highlight2 font-semibold' : ''}`} title={formatDate(activity.due_date)}>
-                          {formatDate(activity.due_date)}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[150px]">
-                      {activity.date_completed && (
-                        <div className="truncate" title={formatDate(activity.date_completed)}>
-                          {formatDate(activity.date_completed)}
-                        </div>
-                      )}
-                    </td>
+      {/* Activity Table with Improved Horizontal Scrolling */}
+      <div className="bg-background border border-gray-700 rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <div className="min-w-full inline-block align-middle">
+            <div className="overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-700">
+                <thead className="bg-gray-800">
+                  <tr>
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-700 whitespace-nowrap"
+                      onClick={() => handleSort('date_created')}
+                    >
+                      Date Created
+                      {getSortIcon('date_created')}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      Category
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-700 whitespace-nowrap"
+                      onClick={() => handleSort('activity_type')}
+                    >
+                      Type
+                      {getSortIcon('activity_type')}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      Description
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      Related To
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      Priority
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      Created By
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      Assigned To
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      Due Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      Date Completed
+                    </th>
                     {showActions && (
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-text min-w-[120px]">
-                        {activity.is_task && activity.status === 'pending' && (
-                          <div className="flex space-x-2">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                        Actions
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700">
+                  {displayActivities.map((activity, index) => (
+                    <tr
+                      key={activity.activity_id}
+                      onClick={() => handleActivityClick(activity.activity_id)}
+                      className={`transition-colors hover:bg-gray-800 cursor-pointer ${
+                        index % 2 === 0 ? 'bg-background' : 'bg-gray-900'
+                      }`}
+                    >
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-text">
+                        <div className="truncate max-w-[120px]" title={formatDate(activity.date_created)}>
+                          {formatDate(activity.date_created)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryBadgeStyle(activity.activity_category)}`}>
+                          {activity.activity_category}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-text">
+                        <div className="truncate max-w-[100px]" title={getActivityTypeLabel(activity.activity_type, activity.activity_category)}>
+                          {getActivityTypeLabel(activity.activity_type, activity.activity_category)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-text">
+                        <div className="truncate max-w-[200px]" title={activity.description}>
+                          {activity.description}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-text">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleNavigateToEntity(activity);
+                          }}
+                          className="text-left truncate hover:text-highlight1 transition-colors cursor-pointer max-w-[120px]"
+                          title={`Navigate to ${activity.related_entity_type}: ${activity.related_entity_name}`}
+                        >
+                          <div className="truncate">
+                            {activity.related_entity_name}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {activity.related_entity_type}
+                          </div>
+                        </button>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {activity.status && (
+                          <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeStyle(activity.status)}`}>
+                            {activity.status}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {activity.priority && (
+                          <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityBadgeStyle(activity.priority)}`}>
+                            {activity.priority}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-text">
+                        <div className="truncate max-w-[100px]" title={activity.created_by}>
+                          {activity.created_by}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-text">
+                        <div className="truncate max-w-[100px]" title={activity.assigned_to}>
+                          {activity.assigned_to}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-text">
+                        {activity.due_date && (
+                          <div className={`truncate max-w-[120px] ${activity.is_overdue ? 'text-highlight2 font-semibold' : ''}`} title={formatDate(activity.due_date)}>
+                            {formatDate(activity.due_date)}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-text">
+                        {activity.date_completed && (
+                          <div className="truncate max-w-[120px]" title={formatDate(activity.date_completed)}>
+                            {formatDate(activity.date_completed)}
+                          </div>
+                        )}
+                      </td>
+                      {showActions && (
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-text">
+                          {activity.is_task && activity.status === 'pending' && (
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCompleteTask(activity.activity_id);
+                                }}
+                                className="text-highlight5 hover:text-green-400 font-medium text-xs"
+                                title="Complete Task"
+                              >
+                                ✓ Complete
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCancelTask(activity.activity_id);
+                                }}
+                                className="text-highlight2 hover:text-red-400 font-medium text-xs"
+                                title="Cancel Task"
+                              >
+                                ✗ Cancel
+                              </button>
+                            </div>
+                          )}
+                          {activity.is_task && activity.status === 'in_progress' && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -592,37 +618,15 @@ const ActivityList = ({
                             >
                               ✓ Complete
                             </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCancelTask(activity.activity_id);
-                              }}
-                              className="text-highlight2 hover:text-red-400 font-medium text-xs"
-                              title="Cancel Task"
-                            >
-                              ✗ Cancel
-                            </button>
-                          </div>
-                        )}
-                        {activity.is_task && activity.status === 'in_progress' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCompleteTask(activity.activity_id);
-                            }}
-                            className="text-highlight5 hover:text-green-400 font-medium text-xs"
-                            title="Complete Task"
-                          >
-                            ✓ Complete
-                          </button>
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         {/* Pagination - only show if enabled and has multiple pages */}

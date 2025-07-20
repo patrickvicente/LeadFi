@@ -7,7 +7,7 @@ import { useServerSorting } from '../utils/useServerSorting';
 import api from '../services/api';
 
 const Activity = () => {
-  const [activeTab, setActiveTab] = useState('due_today');
+  const [activeTab, setActiveTab] = useState('all_activities');
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('activity');
   const [activities, setActivities] = useState([]);
@@ -84,15 +84,14 @@ const Activity = () => {
       };
 
       const response = await api.activity.getActivities(params);
+      
       setActivities(response.activities || []);
       setPagination(prev => ({
         ...prev,
         currentPage: page,
-        totalPages: response.pages,
-        totalItems: response.total
+        totalPages: response.pages || 1,
+        totalItems: response.total || 0
       }));
-      // DEBUGGER CONSOLE LOG
-      console.log("Received Activities",response);
     } catch (error) {
       console.error('Error loading activities:', error);
       setError('Failed to load activities');
@@ -116,8 +115,6 @@ const Activity = () => {
       fetchActivities(1, tabConfig?.filters || {});
     }
   }, [sortField, sortDirection]);
-
-
 
   // Handle pagination
   const handlePageChange = (newPage) => {
@@ -183,57 +180,28 @@ const Activity = () => {
         </div>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Tab Navigation with Horizontal Scrolling */}
       <div className="bg-background border border-gray-700 rounded-lg mb-6">
         <div className="border-b border-gray-700">
-          <nav className="flex space-x-8 px-6">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
-                  activeTab === tab.key
-                    ? 'border-highlight1 text-highlight1'
-                    : 'border-transparent text-gray-400 hover:text-text hover:border-gray-300'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </div>
-
-      {/* Results Summary - consistent with Leads/Customers */}
-      {!loading && !error && (
-        <div className="mb-4 flex justify-between items-center">
-          <p className="text-sm text-gray-400">
-            Showing{' '}
-            <span className="font-medium text-text">
-              {activities.length > 0 ? (pagination.currentPage - 1) * pagination.perPage + 1 : 0}
-            </span>{' '}
-            to{' '}
-            <span className="font-medium text-text">
-              {Math.min(pagination.currentPage * pagination.perPage, pagination.totalItems)}
-            </span>{' '}
-            of{' '}
-            <span className="font-medium text-text">{pagination.totalItems}</span>{' '}
-            {activeTab === 'all_activities' ? 'activities' : 'tasks'}
-          </p>
-          <div className="flex items-center gap-2 text-sm text-gray-400">
-            <span>Per page:</span>
-            <select
-              value={pagination.perPage}
-              onChange={(e) => handlePerPageChange(parseInt(e.target.value))}
-              className="px-2 py-1 border border-gray-600 bg-background text-text rounded-md focus:outline-none focus:ring-2 focus:ring-highlight1"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
+          <div className="overflow-x-auto">
+            <nav className="flex space-x-8 px-6 min-w-max">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+                    activeTab === tab.key
+                      ? 'border-highlight1 text-highlight1'
+                      : 'border-transparent text-gray-400 hover:text-text hover:border-gray-300'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Error State */}
       {error && (
@@ -263,8 +231,47 @@ const Activity = () => {
         onSort={handleSort}
         showFilters={false} // Filters handled by tabs
         showActions={true}
-        showPagination={true}
+        showPagination={false} // Handle pagination in parent component
       />
+
+      {/* Pagination UI - consistent with Leads/Customers */}
+      {!loading && (
+        <div className="mt-4 flex items-center justify-between bg-background p-4 rounded-lg border border-gray-700">
+          <div className="text-sm text-gray-400">
+            Showing {activities.length} of {pagination.totalItems} {activeTab === 'all_activities' ? 'activities' : 'tasks'}
+          </div>
+          <div className="flex items-center space-x-2">
+            <select
+              value={pagination.perPage}
+              onChange={(e) => handlePerPageChange(Number(e.target.value))}
+              className="border border-gray-600 bg-background text-text rounded px-2 py-1 focus:border-highlight1"
+            >
+              <option value={10}>10 per page</option>
+              <option value={20}>20 per page</option>
+              <option value={50}>50 per page</option>
+            </select>
+            <div className="flex space-x-1">
+              <button
+                onClick={() => handlePageChange(pagination.currentPage - 1)}
+                disabled={pagination.currentPage === 1}
+                className="px-3 py-1 border border-gray-600 bg-background text-text rounded disabled:opacity-50 hover:bg-gray-800 transition-colors"
+              >
+                Previous
+              </button>
+              <span className="px-3 py-1 text-text">
+                Page {pagination.currentPage} of {pagination.totalPages}
+              </span>
+              <button
+                onClick={() => handlePageChange(pagination.currentPage + 1)}
+                disabled={pagination.currentPage === pagination.totalPages}
+                className="px-3 py-1 border border-gray-600 bg-background text-text rounded disabled:opacity-50 hover:bg-gray-800 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Activity/Task Modal */}
       <ActivityTaskModal
