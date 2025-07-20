@@ -59,7 +59,6 @@ const Activity = () => {
       key: 'completed', 
       label: 'Completed',
       filters: { 
-        tasks_only: true, 
         status: 'completed' 
       }
     }
@@ -238,7 +237,10 @@ const Activity = () => {
       {!loading && (
         <div className="mt-4 flex items-center justify-between bg-background p-4 rounded-lg border border-gray-700">
           <div className="text-sm text-gray-400">
-            Showing {activities.length} of {pagination.totalItems} {activeTab === 'all_activities' ? 'activities' : 'tasks'}
+            Showing {activities.length} of {pagination.totalItems} {
+              activeTab === 'all_activities' ? 'activities' : 
+              activeTab === 'completed' ? 'completed activities' : 'tasks'
+            }
           </div>
           <div className="flex items-center space-x-2">
             <select
