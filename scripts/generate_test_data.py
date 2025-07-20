@@ -190,7 +190,7 @@ class TestDataGenerator:
             except Exception as e:
                 print(f"   Warning: Could not clear {table}: {e}")
         
-        # Reset sequences
+        # Reset sequences safely
         sequences = [
             'lead_lead_id_seq', 'customer_customer_uid_seq', 
             'contact_contact_id_seq', 'activity_activity_id_seq'
@@ -198,7 +198,22 @@ class TestDataGenerator:
         
         for seq in sequences:
             try:
-                self.cursor.execute(f"ALTER SEQUENCE {seq} RESTART WITH 1")
+                # Check if sequence exists before trying to reset it
+                self.cursor.execute("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.sequences 
+                        WHERE sequence_name = %s
+                    )
+                """, (seq,))
+                
+                exists = self.cursor.fetchone()[0]
+                
+                if exists:
+                    self.cursor.execute(f"ALTER SEQUENCE {seq} RESTART WITH 1")
+                    print(f"   Reset {seq}")
+                else:
+                    print(f"   Skipped {seq} (does not exist)")
+                    
             except Exception as e:
                 print(f"   Warning: Could not reset {seq}: {e}")
                 

@@ -23,21 +23,47 @@ from typing import List, Dict, Any
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from db.db_config import DB_CONFIG
+from db.db_config import get_db_url
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
 class RBACSetup:
     def __init__(self):
-        # Create database connection
-        self.conn = psycopg2.connect(
-            host=DB_CONFIG['host'],
-            port=DB_CONFIG['port'],
-            database=DB_CONFIG['database'],
-            user=DB_CONFIG['user'],
-            password=DB_CONFIG['password']
-        )
-        self.cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+        # Get database URL and parse it for connection
+        db_url = get_db_url()
+        
+        # Parse PostgreSQL URL to get connection parameters
+        if db_url.startswith('postgresql://'):
+            # Extract connection details from URL
+            url_parts = db_url.replace('postgresql://', '').split('@')
+            if len(url_parts) == 2:
+                auth_part, host_part = url_parts
+                user_pass = auth_part.split(':')
+                host_port_db = host_part.split('/')
+                
+                if len(user_pass) >= 2 and len(host_port_db) >= 2:
+                    user = user_pass[0]
+                    password = user_pass[1]
+                    host_port = host_port_db[0].split(':')
+                    host = host_port[0]
+                    port = host_port[1] if len(host_port) > 1 else '5432'
+                    database = host_port_db[1]
+                    
+                    # Create database connection
+                    self.conn = psycopg2.connect(
+                        host=host,
+                        port=port,
+                        database=database,
+                        user=user,
+                        password=password
+                    )
+                    self.cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+                else:
+                    raise ValueError("Invalid database URL format")
+            else:
+                raise ValueError("Invalid database URL format")
+        else:
+            raise ValueError("Only PostgreSQL URLs are supported for RBAC setup")
         
         # Demo users configuration
         self.demo_users = {
@@ -134,6 +160,47 @@ class RBACSetup:
         
         self.conn.commit()
         print("✅ RBAC tables created")
+        
+    def reset_sequences_safely(self):
+        """Safely reset sequences without causing errors"""
+        print("🔄 Resetting sequences safely...")
+        
+        # List of sequences to check and reset
+        sequences_to_check = [
+            'customer_customer_uid_seq',
+            'contact_contact_id_seq', 
+            'activity_activity_id_seq',
+            'lead_lead_id_seq',
+            'users_user_id_seq',
+            'user_assignments_assignment_id_seq',
+            'system_activity_permissions_permission_id_seq',
+            'demo_sessions_session_id_seq'
+        ]
+        
+        for seq_name in sequences_to_check:
+            try:
+                # Check if sequence exists
+                self.cursor.execute("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.sequences 
+                        WHERE sequence_name = %s
+                    )
+                """, (seq_name,))
+                
+                exists = self.cursor.fetchone()[0]
+                
+                if exists:
+                    # Reset sequence if it exists
+                    self.cursor.execute(f"ALTER SEQUENCE {seq_name} RESTART WITH 1")
+                    print(f"   Reset {seq_name}")
+                else:
+                    print(f"   Skipped {seq_name} (does not exist)")
+                    
+            except Exception as e:
+                print(f"   Warning: Could not reset {seq_name}: {e}")
+                
+        self.conn.commit()
+        print("✅ Sequences reset safely")
         
     def setup_system_activity_permissions(self):
         """Setup system activity permissions for different roles"""
@@ -383,6 +450,9 @@ class RBACSetup:
             # Setup tables
             self.setup_user_tables()
             
+            # Reset sequences safely
+            self.reset_sequences_safely()
+
             # Setup system activity permissions
             self.setup_system_activity_permissions()
 
