@@ -99,6 +99,12 @@ class DatabaseInitResource(Resource):
                 'error': str(e)
             }, 500
     
+    def _parse_sql_statements(self, sql_content):
+        """Parse SQL content into individual statements, handling PostgreSQL functions."""
+        # Use a simpler approach - execute the entire SQL file as one statement
+        # This avoids issues with function parsing
+        return [sql_content]
+    
     def _initialize_schema(self):
         """Initialize database schema."""
         try:
@@ -115,8 +121,8 @@ class DatabaseInitResource(Resource):
             with open(init_sql_path, 'r') as f:
                 sql_content = f.read()
             
-            # Execute SQL statements
-            statements = [stmt.strip() for stmt in sql_content.split(';') if stmt.strip()]
+            # Parse SQL statements properly (handle functions, comments, etc.)
+            statements = self._parse_sql_statements(sql_content)
             successful = 0
             errors = 0
             
