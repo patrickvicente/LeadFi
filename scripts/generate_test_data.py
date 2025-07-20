@@ -47,17 +47,22 @@ class TestDataGenerator:
         # Configuration
         self.data_volume = os.getenv('DATA_VOLUME', 'medium')  # small, medium, large
         self.clear_existing = os.getenv('CLEAR_EXISTING_DATA', 'false').lower() == 'true'
+        self.demo_mode = os.getenv('DEMO_MODE', 'false').lower() == 'true'
         
-        # Volume settings
+        # Volume settings with extended time ranges
         self.volume_settings = {
-            'small': {'leads': 50, 'days': 60},
-            'medium': {'leads': 150, 'days': 60},
-            'large': {'leads': 300, 'days': 60}
+            'small': {'leads': 50, 'days': 180},      # 6 months
+            'medium': {'leads': 150, 'days': 180},    # 6 months  
+            'large': {'leads': 300, 'days': 180}      # 6 months
         }
         
-        # Date range (last 2 months)
+        # Date range (6 months of historical data)
         self.end_date = datetime.now()
         self.start_date = self.end_date - timedelta(days=self.volume_settings[self.data_volume]['days'])
+        
+        # Demo mode: spread data more realistically across time
+        if self.demo_mode:
+            self.start_date = self.end_date - timedelta(days=180)  # Always 6 months for demo
         
         # Data definitions
         self.setup_data_definitions()
@@ -235,11 +240,19 @@ class TestDataGenerator:
             return f"+{random.randint(1, 999)}-{random.randint(100, 999)}-{random.randint(1000000, 9999999)}"
             
     def generate_leads(self) -> List[Dict]:
-        """Generate realistic lead data"""
-        print(f"📊 Generating {self.volume_settings[self.data_volume]['leads']} leads...")
+        """Generate realistic lead data spread across 6 months"""
+        print(f"📊 Generating {self.volume_settings[self.data_volume]['leads']} leads over 6 months...")
         
         leads = []
         lead_count = self.volume_settings[self.data_volume]['leads']
+        
+        # Create time buckets for more realistic distribution
+        # More leads in recent months, fewer in older months
+        time_buckets = [
+            (self.end_date - timedelta(days=30), self.end_date, 0.4),      # Last month: 40%
+            (self.end_date - timedelta(days=90), self.end_date - timedelta(days=30), 0.3),  # 2-3 months ago: 30%
+            (self.end_date - timedelta(days=180), self.end_date - timedelta(days=90), 0.3)  # 3-6 months ago: 30%
+        ]
         
         for i in range(lead_count):
             first_name = random.choice(self.first_names)
@@ -259,8 +272,9 @@ class TestDataGenerator:
             status_weights = [0.3, 0.2, 0.15, 0.1, 0.08, 0.12, 0.05]  # From lead generated to lost
             status = random.choices(self.lead_statuses, weights=status_weights)[0]
             
-            # Generate dates based on status progression
-            date_created = self.generate_random_date()
+            # Generate date based on time buckets for realistic distribution
+            bucket_start, bucket_end, bucket_weight = random.choices(time_buckets, weights=[b[2] for b in time_buckets])[0]
+            date_created = self.generate_random_date(bucket_start, bucket_end)
             
             lead = {
                 'full_name': full_name,
@@ -403,22 +417,22 @@ class TestDataGenerator:
         return customer_uids
         
     def generate_activities(self, lead_ids: List[int], leads: List[Dict]) -> List[Dict]:
-        """Generate activities for leads"""
-        print("📝 Generating activities...")
+        """Generate activities for leads with realistic timeline progression"""
+        print("📝 Generating activities with realistic timelines...")
         
         activities = []
         
         for lead_id, lead in zip(lead_ids, leads):
-            # Generate 2-8 activities per lead
+            # Generate 2-8 activities per lead with realistic progression
             num_activities = random.randint(2, 8)
             
             lead_start_date = lead['date_created']
             
-            for i in range(num_activities):
-                # Activity date progression
-                activity_date = lead_start_date + timedelta(days=random.randint(0, 45))
-                
-                # Choose activity type based on category
+            # Create activity timeline based on lead status
+            activity_timeline = self._create_activity_timeline(lead, num_activities)
+            
+            for i, (activity_date, activity_config) in enumerate(activity_timeline):
+                # Choose activity type based on timeline position and lead status
                 if i == 0:
                     # First activity is always lead creation (system)
                     activity_type = 'lead_created'
@@ -427,17 +441,17 @@ class TestDataGenerator:
                     assigned_to = 'system'
                     description = f"Lead created from {lead['source']}"
                 else:
-                    # Mix of manual and system activities
+                    # Mix of manual and system activities based on timeline
                     if random.random() < 0.7:  # 70% manual activities
                         category = 'manual'
-                        activity_type = random.choice(self.activity_types_manual)
+                        activity_type = activity_config.get('type', random.choice(self.activity_types_manual))
                         assigned_to = lead['bd_in_charge']
-                        status = random.choices(['completed', 'pending', 'in_progress'], 
-                                              weights=[0.6, 0.25, 0.15])[0]
+                        status = activity_config.get('status', random.choices(['completed', 'pending', 'in_progress'], 
+                                              weights=[0.6, 0.25, 0.15])[0])
                         description = self.generate_activity_description(activity_type, lead)
                     else:
                         category = 'system'
-                        activity_type = random.choice(self.activity_types_system)
+                        activity_type = activity_config.get('type', random.choice(self.activity_types_system))
                         assigned_to = 'system'
                         status = 'completed'
                         description = self.generate_system_activity_description(activity_type, lead)
@@ -465,6 +479,48 @@ class TestDataGenerator:
                 activities.append(activity)
                 
         return activities
+    
+    def _create_activity_timeline(self, lead: Dict, num_activities: int) -> List[tuple]:
+        """Create realistic activity timeline based on lead status and progression"""
+        timeline = []
+        lead_start_date = lead['date_created']
+        
+        # Define activity progression based on lead status
+        status_progression = {
+            '1. lead generated': ['lead_created', 'call', 'email'],
+            '2. proposal': ['proposal_sent', 'meeting', 'follow_up'],
+            '3. negotiation': ['negotiation', 'meeting', 'email'],
+            '4. registration': ['onboarding', 'demo', 'follow_up'],
+            '5. integration': ['demo', 'onboarding', 'follow_up'],
+            '6. closed won': ['lead_converted', 'onboarding', 'follow_up'],
+            '7. lost': ['follow_up', 'email', 'call']
+        }
+        
+        # Get activities for this lead's status
+        status_activities = status_progression.get(lead['status'], self.activity_types_manual)
+        
+        # Create timeline with realistic spacing
+        for i in range(num_activities):
+            if i == 0:
+                # First activity is always at lead creation
+                activity_date = lead_start_date
+                activity_config = {'type': 'lead_created', 'status': 'completed'}
+            else:
+                # Subsequent activities spread over time
+                days_offset = random.randint(1, 30)  # 1-30 days between activities
+                activity_date = lead_start_date + timedelta(days=days_offset)
+                
+                # Choose activity type based on lead status
+                activity_type = random.choice(status_activities)
+                status = 'completed' if activity_date < datetime.now() else random.choice(['completed', 'pending', 'in_progress'])
+                
+                activity_config = {'type': activity_type, 'status': status}
+            
+            timeline.append((activity_date, activity_config))
+        
+        # Sort timeline by date
+        timeline.sort(key=lambda x: x[0])
+        return timeline
         
     def generate_activity_description(self, activity_type: str, lead: Dict) -> str:
         """Generate realistic activity descriptions"""
