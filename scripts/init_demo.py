@@ -104,6 +104,7 @@ def main():
     print()
     
     print("👥 Demo Users Available:")
+    print("   Admin: Admin User (admin@leadfi.com)")
     print("   Manager: Sarah Johnson (sarah.johnson@leadfi.com)")
     print("   Senior BD: Alex Chen (alex.chen@leadfi.com)")
     print("   Junior BD: Emma Thompson (emma.thompson@leadfi.com)")
@@ -113,9 +114,17 @@ def main():
     print("🎯 Demo Features:")
     print("   📊 Analytics dashboard with 6 months of data")
     print("   👥 Role-based access control")
+    print("   🔒 System activity visibility (Admin only)")
     print("   📈 Lead conversion funnel")
     print("   💹 Trading volume analytics")
     print("   📝 Activity management")
+    print()
+    
+    print("🔐 Permission Levels:")
+    print("   Admin: Full access + system activities + user management")
+    print("   Manager: Full access + team management")
+    print("   BD (Senior/Junior): All leads + customers + activities + limited analytics")
+    print("   Demo: Read-only access")
     print()
     
     print("🚀 Your demo is ready! Access it at your Railway URL")

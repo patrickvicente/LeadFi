@@ -1,24 +1,52 @@
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, validate, post_load
+from datetime import datetime
+import os
 
 class LeadSchema(Schema):
+    """Schema for Lead model with conditional date_created override."""
+    
     lead_id = fields.Int(dump_only=True)
-    full_name = fields.Str(required=True)
-    title = fields.Str(allow_none=True)
-    email = fields.Email(allow_none=True)
-    telegram = fields.Str(allow_none=True)
-    phone_number = fields.Str(allow_none=True)
+    full_name = fields.Str(required=True, validate=validate.Length(min=1, max=50))
+    title = fields.Str(validate=validate.Length(max=50))
+    email = fields.Email(validate=validate.Length(max=120))
+    telegram = fields.Str(validate=validate.Length(max=50))
+    phone_number = fields.Str(validate=validate.Length(max=20))
     source = fields.Str(required=True, validate=validate.OneOf([
-    'company', 'apollo', 'linkedin', 'hubspot', 'event', 'research', 'referral'
+        'company', 'apollo', 'linkedin', 'hubspot', 'event', 'research', 'referral'
     ]))
-    status = fields.Str(required=True, validate=validate.OneOf([
-        '1. lead generated', '2. proposal', '3. negotiation', '4. registration', 
-        '5. integration', '6. closed won', '7. lost'
+    status = fields.Str(validate=validate.OneOf([
+        '1. lead generated', '2. proposal', '3. negotiation', 
+        '4. registration', '5. integration', '6. closed won', '7. lost'
     ]))
-    company_name = fields.Str(required=True)
-    country = fields.Str(allow_none=True)
-    bd_in_charge = fields.Str(required=True)
-    linkedin_url = fields.Str(allow_none=True)
-    background = fields.Str(allow_none=True)
+    
+    # Conditional date_created field - only writable in demo mode
     date_created = fields.DateTime(dump_only=True)
-    is_converted = fields.Boolean()
-    type = fields.String(required=True)
+    _demo_date_created = fields.DateTime(load_only=True, data_key='date_created')
+    
+    linkedin_url = fields.Url(validate=validate.Length(max=255))
+    company_name = fields.Str(validate=validate.Length(max=120))
+    country = fields.Str(validate=validate.Length(max=50))
+    bd_in_charge = fields.Str(required=True, validate=validate.Length(max=20))
+    background = fields.Str()
+    is_converted = fields.Bool(dump_only=True)
+    type = fields.Str(required=True, validate=validate.OneOf([
+        'liquidity provider', 'vip', 'institution', 'api', 'broker',
+        'otc', 'project mm', 'asset manager', 'venture capital',
+        'prop trader', 'family office', 'hft', 'other'
+    ]))
+    
+    @post_load
+    def handle_date_created(self, data, **kwargs):
+        """Handle date_created override in demo mode."""
+        # Check if we're in demo mode and date_created was provided
+        is_demo_mode = os.getenv('DEMO_MODE', 'false').lower() == 'true'
+        
+        if is_demo_mode and '_demo_date_created' in data:
+            # In demo mode, allow date_created override
+            data['date_created'] = data.pop('_demo_date_created')
+        else:
+            # In production, remove any date_created attempts
+            data.pop('_demo_date_created', None)
+            # date_created will use database DEFAULT CURRENT_TIMESTAMP
+            
+        return data

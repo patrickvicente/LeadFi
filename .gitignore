@@ -49,6 +49,7 @@ venv/
 
 # cursor
 .cursor/
+.cursorrules
 
 # Environment
 .env

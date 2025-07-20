@@ -41,11 +41,18 @@ class RBACSetup:
         
         # Demo users configuration
         self.demo_users = {
+            'admin': {
+                'name': 'Admin User',
+                'email': 'admin@leadfi.com',
+                'role': 'admin',
+                'permissions': ['all', 'system_activities', 'user_management'],
+                'note': 'Full system access including system activities and user management'
+            },
             'manager': {
                 'name': 'Sarah Johnson',
                 'email': 'sarah.johnson@leadfi.com',
                 'role': 'manager',
-                'permissions': ['all'],
+                'permissions': ['all', 'team_management'],
                 'bd_team': ['Alex Chen', 'Michael Rodriguez', 'Emma Thompson', 'David Kim']
             },
             'bd_senior': {
@@ -53,14 +60,14 @@ class RBACSetup:
                 'email': 'alex.chen@leadfi.com',
                 'role': 'bd_senior',
                 'permissions': ['leads', 'customers', 'activities', 'limited_analytics'],
-                'assigned_leads': ['liquidity provider', 'institution', 'api']
+                'assigned_leads': ['liquidity provider', 'institution', 'api', 'vip', 'broker', 'asset manager']
             },
             'bd_junior': {
                 'name': 'Emma Thompson',
                 'email': 'emma.thompson@leadfi.com', 
                 'role': 'bd_junior',
-                'permissions': ['leads', 'customers', 'activities'],
-                'assigned_leads': ['vip', 'broker', 'asset manager']
+                'permissions': ['leads', 'customers', 'activities', 'limited_analytics'],
+                'assigned_leads': ['liquidity provider', 'institution', 'api', 'vip', 'broker', 'asset manager']
             },
             'demo_user': {
                 'name': 'Demo User',
@@ -101,6 +108,18 @@ class RBACSetup:
             )
         """)
         
+        # Create system_activity_permissions table
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS system_activity_permissions (
+                permission_id SERIAL PRIMARY KEY,
+                role VARCHAR(50) NOT NULL,
+                can_view_system_activities BOOLEAN DEFAULT FALSE,
+                can_view_user_management BOOLEAN DEFAULT FALSE,
+                can_view_team_analytics BOOLEAN DEFAULT TRUE,
+                date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
         # Create demo_sessions table for tracking demo usage
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS demo_sessions (
@@ -115,6 +134,65 @@ class RBACSetup:
         
         self.conn.commit()
         print("✅ RBAC tables created")
+        
+    def setup_system_activity_permissions(self):
+        """Setup system activity permissions for different roles"""
+        print("🔒 Setting up system activity permissions...")
+        
+        # Clear existing permissions
+        self.cursor.execute("DELETE FROM system_activity_permissions")
+        
+        # Define permissions for each role
+        role_permissions = [
+            {
+                'role': 'admin',
+                'can_view_system_activities': True,
+                'can_view_user_management': True,
+                'can_view_team_analytics': True
+            },
+            {
+                'role': 'manager',
+                'can_view_system_activities': False,
+                'can_view_user_management': False,
+                'can_view_team_analytics': True
+            },
+            {
+                'role': 'bd_senior',
+                'can_view_system_activities': False,
+                'can_view_user_management': False,
+                'can_view_team_analytics': True
+            },
+            {
+                'role': 'bd_junior',
+                'can_view_system_activities': False,
+                'can_view_user_management': False,
+                'can_view_team_analytics': True
+            },
+            {
+                'role': 'demo',
+                'can_view_system_activities': False,
+                'can_view_user_management': False,
+                'can_view_team_analytics': False
+            }
+        ]
+        
+        # Insert permissions
+        for permission in role_permissions:
+            try:
+                insert_query = """
+                INSERT INTO system_activity_permissions 
+                (role, can_view_system_activities, can_view_user_management, can_view_team_analytics)
+                VALUES (%(role)s, %(can_view_system_activities)s, %(can_view_user_management)s, %(can_view_team_analytics)s)
+                """
+                
+                self.cursor.execute(insert_query, permission)
+                print(f"   Set permissions for {permission['role']}")
+                
+            except Exception as e:
+                print(f"   Warning: Could not set permissions for {permission['role']}: {e}")
+                
+        self.conn.commit()
+        print("✅ System activity permissions configured")
         
     def create_demo_users(self):
         """Create demo users with different roles"""
@@ -305,6 +383,9 @@ class RBACSetup:
             # Setup tables
             self.setup_user_tables()
             
+            # Setup system activity permissions
+            self.setup_system_activity_permissions()
+
             # Create demo users
             user_ids = self.create_demo_users()
             

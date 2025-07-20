@@ -49,6 +49,10 @@ class TestDataGenerator:
         self.clear_existing = os.getenv('CLEAR_EXISTING_DATA', 'false').lower() == 'true'
         self.demo_mode = os.getenv('DEMO_MODE', 'false').lower() == 'true'
         
+        # Set DEMO_MODE for API schema override
+        if self.demo_mode:
+            os.environ['DEMO_MODE'] = 'true'
+        
         # Volume settings with extended time ranges
         self.volume_settings = {
             'small': {'leads': 50, 'days': 180},      # 6 months
