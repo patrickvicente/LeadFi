@@ -113,9 +113,53 @@ class DatabaseInitResource(Resource):
     
     def _parse_sql_statements(self, sql_content):
         """Parse SQL content into individual statements, handling PostgreSQL functions."""
-        # Use a simpler approach - execute the entire SQL file as one statement
-        # This avoids issues with function parsing
-        return [sql_content]
+        # Split by semicolon but handle PostgreSQL functions properly
+        statements = []
+        current_statement = ""
+        in_function = False
+        dollar_quote_level = 0
+        
+        lines = sql_content.split('\n')
+        
+        for line in lines:
+            # Check for function start
+            if 'CREATE OR REPLACE FUNCTION' in line.upper() or 'CREATE FUNCTION' in line.upper():
+                in_function = True
+            
+            # Count dollar quotes in functions
+            if in_function:
+                dollar_quote_level += line.count('$$')
+            
+            # Add line to current statement
+            if current_statement:
+                current_statement += "\n" + line
+            else:
+                current_statement = line
+            
+            # Check for end of function (even number of $$ means function is complete)
+            if in_function and dollar_quote_level % 2 == 0 and dollar_quote_level > 0:
+                if line.strip().endswith(';'):
+                    statements.append(current_statement.strip())
+                    current_statement = ""
+                    in_function = False
+                    dollar_quote_level = 0
+            # Regular statement ending
+            elif not in_function and line.strip().endswith(';'):
+                statements.append(current_statement.strip())
+                current_statement = ""
+        
+        # Add any remaining statement
+        if current_statement.strip():
+            statements.append(current_statement.strip())
+        
+        # Filter out empty statements and comments
+        filtered_statements = []
+        for stmt in statements:
+            stmt = stmt.strip()
+            if stmt and not stmt.startswith('--') and not stmt.upper().startswith('COMMENT'):
+                filtered_statements.append(stmt)
+        
+        return filtered_statements
     
     def _initialize_schema(self):
         """Initialize database schema."""
