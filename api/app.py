@@ -33,6 +33,7 @@ from api.models.contact import Contact
 from api.models.activity import Activity
 from api.models.trading_volume import TradingVolume
 from api.resources.analytics import AvgDailyActivityResource, LeadConversionRateResource, ActivityAnalyticsResource, LeadFunnelResource
+from api.resources.database import DatabaseInitResource
 
 # Initialize logging
 setup_logging(
@@ -53,9 +54,17 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     # Initialize extensions with specific CORS configuration
+    # Allow requests from localhost and 127.0.0.1 for local development
+    allowed_origins = [
+        "http://localhost:3000",    # React development server
+        "http://127.0.0.1:3000",    # Alternative localhost
+        "http://localhost:5000",    # Flask local server
+        "http://127.0.0.1:5000",    # Alternative Flask local
+    ]
+    
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["http://localhost:3000"],  # Your React app's URL
+            "origins": allowed_origins,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
             "supports_credentials": True,
@@ -96,8 +105,14 @@ def create_app():
     def log_response(response):
         """Log outgoing responses and add CORS headers."""
         try:
-            # Add CORS headers to response
-            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+            # Add CORS headers to response - allow local development origins
+            origin = request.headers.get('Origin')
+            if origin in allowed_origins:
+                response.headers.add('Access-Control-Allow-Origin', origin)
+            else:
+                # Default to localhost:3000 for React app
+                response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+            
             response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
             response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
             response.headers.add('Access-Control-Allow-Credentials', 'true')
@@ -116,11 +131,21 @@ def create_app():
             'status': 'healthy',
             'message': 'LeadFi API is running'
         }
+    
+    # Simple test endpoint outside API path
+    @app.route('/test-simple')
+    def test_simple():
+        """Simple test endpoint to verify routing works."""
+        return {
+            'status': 'success',
+            'message': 'Simple routing works!',
+            'timestamp': '2025-01-18'
+        }
 
-    # Database connection test endpoint
+    # Database connection test endpoint (enhanced with initialization)
     @app.route('/api/db-test')
     def db_test():
-        """Test database connectivity."""
+        """Test database connectivity and optionally initialize."""
         try:
             # Test basic database connection
             from sqlalchemy import text
@@ -133,96 +158,77 @@ def create_app():
             inspector = inspect(db.engine)
             tables = inspector.get_table_names()
             
-            return {
+            # Check if ?init=true parameter is provided
+            init_requested = request.args.get('init', '').lower() == 'true'
+            init_result = None
+            
+            if init_requested and len(tables) == 0:
+                # Initialize database if no tables exist and init is requested
+                try:
+                    import os
+                    from pathlib import Path
+                    project_root = Path(__file__).parent.parent
+                    init_sql_path = project_root / "db" / "init.sql"
+                    
+                    if init_sql_path.exists():
+                        with open(init_sql_path, 'r') as f:
+                            sql_content = f.read()
+                        
+                        # Execute SQL statements
+                        statements = [stmt.strip() for stmt in sql_content.split(';') if stmt.strip()]
+                        successful = 0
+                        
+                        with db.engine.connect() as conn:
+                            for statement in statements:
+                                if statement and not statement.upper().startswith('--'):
+                                    try:
+                                        conn.execute(text(statement))
+                                        conn.commit()
+                                        successful += 1
+                                    except Exception as e:
+                                        logger.warning(f"SQL execution warning: {str(e)[:100]}")
+                        
+                        # Re-check tables after initialization
+                        inspector = inspect(db.engine)
+                        tables = inspector.get_table_names()
+                        
+                        init_result = {
+                            'initialized': True,
+                            'statements_executed': successful,
+                            'tables_created': len(tables)
+                        }
+                    else:
+                        init_result = {'error': 'init.sql file not found'}
+                except Exception as e:
+                    init_result = {'error': f'Initialization failed: {str(e)}'}
+            elif init_requested and len(tables) > 0:
+                init_result = {'message': 'Database already initialized', 'skipped': True}
+            
+            response = {
                 'status': 'success',
                 'message': 'Database connection successful',
                 'database_url': get_db_url().split('@')[0] + '@***',  # Hide credentials
                 'connection_test': 'PASS',
                 'query_result': row[0] if row else None,
                 'tables_found': len(tables),
-                'table_names': tables[:5]  # Show first 5 tables
+                'table_names': tables[:10]  # Show first 10 tables
             }
+            
+            if init_result:
+                response['initialization'] = init_result
+                
+            return response
+            
         except Exception as e:
-            logger.error(f"Database connection test failed: {e}")
+            logger.error(f"Database test failed: {e}")
             return {
                 'status': 'error',
-                'message': 'Database connection failed',
+                'message': 'Database test failed',
                 'error': str(e),
                 'database_url': get_db_url().split('@')[0] + '@***'  # Hide credentials
                          }, 500
 
-    # Database initialization endpoint
-    @app.route('/api/init-db', methods=['POST'])
-    def init_database():
-        """Initialize database with schema (one-time setup)."""
-        try:
-            # Check if tables already exist
-            from sqlalchemy import inspect, text
-            inspector = inspect(db.engine)
-            existing_tables = inspector.get_table_names()
-            
-            if len(existing_tables) > 0:
-                return {
-                    'status': 'info',
-                    'message': 'Database already initialized',
-                    'existing_tables': len(existing_tables),
-                    'table_names': existing_tables[:5]
-                }
-            
-            # Read and execute init.sql
-            import os
-            from pathlib import Path
-            project_root = Path(__file__).parent.parent
-            init_sql_path = project_root / "db" / "init.sql"
-            
-            if not init_sql_path.exists():
-                return {
-                    'status': 'error',
-                    'message': 'init.sql file not found'
-                }, 404
-            
-            with open(init_sql_path, 'r') as f:
-                sql_content = f.read()
-            
-            # Execute SQL statements
-            statements = [stmt.strip() for stmt in sql_content.split(';') if stmt.strip()]
-            successful = 0
-            errors = 0
-            
-            with db.engine.connect() as conn:
-                for statement in statements:
-                    if statement and not statement.upper().startswith('--'):
-                        try:
-                            conn.execute(text(statement))
-                            conn.commit()
-                            successful += 1
-                        except Exception as e:
-                            errors += 1
-                            if errors <= 3:  # Only log first few errors
-                                logger.warning(f"SQL execution warning: {str(e)[:100]}")
-            
-            # Verify tables were created
-            inspector = inspect(db.engine)
-            final_tables = inspector.get_table_names()
-            
-            logger.info(f"Database initialized: {successful} statements executed, {len(final_tables)} tables created")
-            
-            return {
-                'status': 'success',
-                'message': 'Database initialized successfully',
-                'statements_executed': successful,
-                'warnings': errors,
-                'tables_created': len(final_tables),
-                'table_names': final_tables
-            }
-            
-        except Exception as e:
-            logger.error(f"Database initialization failed: {e}")
-            return {
-                'status': 'error',
-                'message': 'Database initialization failed',
-                'error': str(e)
-            }, 500
+    # REMOVED DUPLICATE: Database initialization now handled by DatabaseInitResource
      
      # Simple test route to verify routing works
     @app.route('/api/test')
@@ -232,6 +238,38 @@ def create_app():
             'status': 'success',
             'message': 'Flask routing is working!',
             'route': '/api/test'
+        }
+    
+    # Add the missing test-simple route under API
+    @app.route('/api/test-simple')
+    def api_test_simple():
+        """Simple test route under /api/ path."""
+        return {
+            'status': 'success',
+            'message': 'API test-simple route is working!',
+            'route': '/api/test-simple'
+        }
+    
+    # Debug route to test POST method
+    @app.route('/api/debug-post', methods=['POST'])
+    def debug_post():
+        """Debug POST route to test if POST methods work."""
+        return {
+            'status': 'success',
+            'message': 'POST method is working!',
+            'route': '/api/debug-post'
+        }
+    
+    # Test route outside API path
+    @app.route('/init-db', methods=['POST', 'GET'])
+    def init_database_test():
+        """Test init database route outside /api/ path."""
+        method = request.method
+        return {
+            'status': 'success',
+            'message': f'{method} method works outside /api/ path!',
+            'route': '/init-db',
+            'method': method
         }
     
         # REMOVED DUPLICATE STATIC ROUTE - consolidated below
@@ -482,6 +520,48 @@ def create_app():
     api.add_resource(TradingVolumeTimeSeriesResource, '/api/trading-volume-time-series')
     api.add_resource(TradingVolumeTopCustomersResource, '/api/analytics/trading-volume-top-customers')
     
+    # Database management resources
+    api.add_resource(DatabaseInitResource, '/api/init-db')
+    
+    # Database status check endpoint
+    @app.route('/api/db-status', methods=['GET'])
+    def database_status():
+        """Check database status without conflicts."""
+        try:
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            existing_tables = inspector.get_table_names()
+            
+            return {
+                'status': 'info',
+                'message': 'Database status check',
+                'tables_found': len(existing_tables),
+                'table_names': existing_tables[:10],
+                'note': 'Use POST to /api/init-db to initialize database'
+            }
+            
+        except Exception as e:
+            logger.error(f"Database status check failed: {e}")
+            return {
+                'status': 'error',
+                'message': 'Database status check failed',
+                'error': str(e)
+            }, 500
+    
+    # Debug endpoint to list all routes
+    @app.route('/api/debug/routes')
+    def list_routes():
+        """List all registered routes for debugging."""
+        routes = []
+        for rule in app.url_map.iter_rules():
+            methods = rule.methods if rule.methods else set()
+            routes.append({
+                'endpoint': rule.endpoint,
+                'methods': list(methods),
+                'rule': str(rule)
+            })
+        return {'routes': routes}
+    
     # BULLETPROOF Static files route - simple and direct
     @app.route('/static/<path:filename>')
     def serve_static_files(filename):
@@ -550,14 +630,20 @@ def create_app():
             from flask import abort
             abort(500)
     
-    # Serve React app in production  
+    # Serve React app in production - MOVED TO BOTTOM TO PREVENT API INTERFERENCE
+    # This was causing all API routes to return 404!
+    # def serve_react_app(path): ... moved below
+    
+    # NOW register the catch-all route AFTER all API routes are registered
+    # This ensures API routes take precedence over the catch-all
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react_app(path):
-        # Skip ALL API requests - let Flask handle them through specific routes
+        # Skip ALL API requests - let Flask-RESTful handle them
         if path.startswith('api/'):
-            from flask import abort
-            abort(404)
+            # This should never be reached if API routes are registered properly
+            from werkzeug.exceptions import NotFound
+            raise NotFound()
             
         # Get build directory - use absolute path resolution
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
