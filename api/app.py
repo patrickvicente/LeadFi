@@ -450,9 +450,9 @@ def create_app():
     def test_css():
         """Test serving the specific CSS file that's failing."""
         try:
-            css_file = '/app/frontend/build/static/css/main.73e77aa0.css'
+            css_file = '/app/frontend/build/static/css/main.c037810f.css'
             if os.path.exists(css_file):
-                return send_from_directory('/app/frontend/build/static/css', 'main.73e77aa0.css')
+                return send_from_directory('/app/frontend/build/static/css', 'main.c037810f.css')
             else:
                 return {'error': f'CSS file not found at {css_file}'}, 404
         except Exception as e:
@@ -463,9 +463,9 @@ def create_app():
     def test_js():
         """Test serving the specific JS file that's failing."""
         try:
-            js_file = '/app/frontend/build/static/js/main.833fd8cd.js'
+            js_file = '/app/frontend/build/static/js/main.e14791c1.js'
             if os.path.exists(js_file):
-                return send_from_directory('/app/frontend/build/static/js', 'main.833fd8cd.js')
+                return send_from_directory('/app/frontend/build/static/js', 'main.e14791c1.js')
             else:
                 return {'error': f'JS file not found at {js_file}'}, 404
         except Exception as e:
@@ -475,7 +475,7 @@ def create_app():
     @app.route('/api/debug/test-static-simple')
     def test_static_simple():
         """Simple test to check if we can read the JS file directly."""
-        filename = 'js/main.833fd8cd.js'
+        filename = 'js/main.e14791c1.js'
         possible_dirs = [
             '/app/frontend/build/static',
             os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend', 'build', 'static'),
