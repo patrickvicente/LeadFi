@@ -59,16 +59,9 @@ class Customer(db.Model):
         return None
 
     def get_date_converted(self):
-        """Get the date when the primary lead was converted (from contact table)"""
-        from api.models.contact import Contact
-        
-        primary_contact = db.session.query(Contact).filter(
-            Contact.customer_uid == self.customer_uid,
-            Contact.is_primary_contact == True
-        ).first()
-        
-        if primary_contact:
-            return primary_contact.date_added
+        """Get the date when the customer was created (conversion date)"""
+        # The date_created field represents when the customer was created
+        # which is effectively when the lead was converted
         return self.date_created
 
     def get_bd_in_charge(self):
