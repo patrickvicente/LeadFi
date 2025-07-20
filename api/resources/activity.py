@@ -72,7 +72,12 @@ class ActivityListResource(Resource):
                 
             # Task filtering
             if tasks_only:
-                query = query.filter(Activity.due_date.isnot(None))
+                query = query.filter(
+                    or_(
+                        Activity.status.in_(['pending', 'in_progress']),
+                        Activity.due_date.isnot(None)
+                    )
+                )
                 
             if overdue_only:
                 query = query.filter(
