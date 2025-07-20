@@ -3,12 +3,14 @@ import errorService from './errorService';
 
 // Get API base URL based on environment
 const getApiBaseUrl = () => {
-  // In production, use relative path (same domain)
-  if (process.env.NODE_ENV === 'production') {
-    return '/api';
+  // Check if we're in production (Railway deployment)
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    // Production - use relative URL (same domain)
+    return '';
+  } else {
+    // Development - use Flask server
+    return 'http://localhost:5000';
   }
-  // In development, use local backend
-  return process.env.REACT_APP_API_URL || 'http://127.0.0.1:5000/api';
 };
 
 // Create axios instance with default config
@@ -20,13 +22,21 @@ const api = axios.create({
   }
 });
 
-// Add request interceptor for authentication and retry handling
+// Add request interceptor for authentication and demo mode
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Add demo mode header if in demo mode
+    // Temporarily disabled due to CORS issues
+    // const isDemoMode = localStorage.getItem('demoMode') === 'true';
+    // if (isDemoMode) {
+    //   config.headers['X-Demo-Mode'] = 'true';
+    // }
+    
     return config;
   },
   (error) => {
@@ -34,43 +44,17 @@ api.interceptors.request.use(
   }
 );
 
-// Add response interceptor for comprehensive error handling
+// Add response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
-    // Clear retry counts on successful responses
-    if (response.config._errorContext) {
-      errorService.clearRetryCount(response.config._errorContext);
-    }
     return response;
   },
-  async (error) => {
-    const context = error.config._errorContext || {};
-    
-    try {
-      const errorInfo = await errorService.handleAPIError(error, context);
-      
-      // Handle automatic retries
-      if (errorInfo.shouldRetry) {
-        console.log(`Retrying request to ${error.config.url} (attempt ${errorInfo.retryCount})`);
-        
-        // Wait for retry delay
-        await new Promise(resolve => setTimeout(resolve, errorInfo.retryDelay));
-        
-        // Update context with retry information
-        error.config._errorContext = {
-          ...context,
-          retryCount: errorInfo.retryCount
-        };
-        
-        // Retry the request
-        return api.request(error.config);
-      }
-      
-      // Attach processed error info to the error object
-      error.processedError = errorInfo;
-      
-    } catch (processingError) {
-      console.error('Error processing API error:', processingError);
+  (error) => {
+    // Handle demo mode errors
+    if (error.response?.status === 401 && localStorage.getItem('demoMode') === 'true') {
+      // In demo mode, redirect to demo page instead of login
+      window.location.href = '/demo';
+      return Promise.reject(error);
     }
     
     return Promise.reject(error);
@@ -106,7 +90,7 @@ export const leadApi = {
   // Get all leads with optional filters
   getLeads: async (params = {}) => {
     return await makeAPICall(
-      () => api.get('/leads', { params }),
+      () => api.get('/api/leads', { params }),
       { operation: 'fetch_leads', params }
     ).then(response => response.data);
   },
@@ -114,7 +98,7 @@ export const leadApi = {
   // Get a single lead by ID
   getLead: async (leadId) => {
     try {
-      const response = await api.get(`/leads/${leadId}`);
+      const response = await api.get(`/api/leads/${leadId}`);
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch lead');
@@ -124,7 +108,7 @@ export const leadApi = {
   // Create a new lead
   createLead: async (leadData) => {
     try {
-      const response = await api.post('/leads', leadData);
+      const response = await api.post('/api/leads', leadData);
       return response.data;
     } catch (error) {
       throw new Error('Failed to create lead');
@@ -134,7 +118,7 @@ export const leadApi = {
   // Update an existing lead
   updateLead: async (leadId, leadData) => {
     try {
-      const response = await api.put(`/leads/${leadId}`, leadData);
+      const response = await api.put(`/api/leads/${leadId}`, leadData);
       return response.data;
     } catch (error) {
       throw new Error('Failed to update lead');
@@ -144,7 +128,7 @@ export const leadApi = {
   // Delete a lead
   deleteLead: async (leadId) => {
     try {
-      await api.delete(`/leads/${leadId}`);
+      await api.delete(`/api/leads/${leadId}`);
       return true;
     } catch (error) {
       throw new Error('Failed to delete lead');
@@ -154,7 +138,7 @@ export const leadApi = {
   // Convert a lead to a customer
   convertLead: async (leadId, customerData) => {
     try {
-      const response = await api.post(`/leads/${leadId}`, customerData);
+      const response = await api.post(`/api/leads/${leadId}`, customerData);
       return response.data;
     } catch (error) {
       console.error('Error converting lead:', error);
@@ -165,7 +149,7 @@ export const leadApi = {
   // Get lead conversion rate
   getLeadConversionRate: async (filters = {}) => {
     try {
-      const response = await api.get('/leads/conversion-rate', { params: filters });
+      const response = await api.get('/api/leads/conversion-rate', { params: filters });
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch lead conversion rate');
@@ -177,7 +161,7 @@ export const leadApi = {
 export const customerApi = {
   getCustomers: async (filters = {}) => {
     try {
-      const response = await api.get('/customers', { params: filters });
+      const response = await api.get('/api/customers', { params: filters });
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch customers');
@@ -186,7 +170,7 @@ export const customerApi = {
 
   getCustomer: async (customerId) => {
     try {
-      const response = await api.get(`/customers/${customerId}`);
+      const response = await api.get(`/api/customers/${customerId}`);
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch customer');
@@ -195,7 +179,7 @@ export const customerApi = {
 
   createCustomer: async (customerData) => {
     try {
-      const response = await api.post('/customers', customerData);
+      const response = await api.post('/api/customers', customerData);
       return response.data;
     } catch (error) {
       throw new Error('Failed to create customer');
@@ -204,7 +188,7 @@ export const customerApi = {
 
   updateCustomer: async (customerId, customerData) => {
     try {
-      const response = await api.put(`/customers/${customerId}`, customerData);
+      const response = await api.put(`/api/customers/${customerId}`, customerData);
       return response.data;
     } catch (error) {
       throw new Error('Failed to update customer');
@@ -213,7 +197,7 @@ export const customerApi = {
 
   deleteCustomer: async (customerId) => {
     try {
-      await api.delete(`/customers/${customerId}`);
+      await api.delete(`/api/customers/${customerId}`);
       return true;
     } catch (error) {
       throw new Error('Failed to delete customer');
@@ -226,7 +210,7 @@ export const activityApi = {
   // Get all activities with filtering and pagination
   getActivities: async (filters = {}) => {
     try {
-      const response = await api.get('/activities', { params: filters });
+      const response = await api.get('/api/activities', { params: filters });
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch activities');
@@ -236,7 +220,7 @@ export const activityApi = {
   // Get a single activity
   getActivity: async (activityId) => {
     try {
-      const response = await api.get(`/activities/${activityId}`);
+      const response = await api.get(`/api/activities/${activityId}`);
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch activity');
@@ -246,7 +230,7 @@ export const activityApi = {
   // Create a new manual activity
   createActivity: async (activityData) => {
     try {
-      const response = await api.post('/activities', activityData);
+      const response = await api.post('/api/activities', activityData);
       return response.data;
     } catch (error) {
       throw new Error('Failed to create activity');
@@ -256,7 +240,7 @@ export const activityApi = {
   // Update an existing activity
   updateActivity: async (activityId, activityData) => {
     try {
-      const response = await api.put(`/activities/${activityId}`, activityData);
+      const response = await api.put(`/api/activities/${activityId}`, activityData);
       return response.data;
     } catch (error) {
       throw new Error('Failed to update activity');
@@ -266,7 +250,7 @@ export const activityApi = {
   // Delete an activity
   deleteActivity: async (activityId) => {
     try {
-      const response = await api.delete(`/activities/${activityId}`);
+      const response = await api.delete(`/api/activities/${activityId}`);
       return response.data;
     } catch (error) {
       throw new Error('Failed to delete activity');
@@ -276,7 +260,7 @@ export const activityApi = {
   // Get activity timeline for lead/customer
   getTimeline: async (filters = {}) => {
     try {
-      const response = await api.get('/activities/timeline', { params: filters });
+      const response = await api.get('/api/activities/timeline', { params: filters });
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch activity timeline');
@@ -296,7 +280,7 @@ export const activityApi = {
   // Get activities for a specific lead
   getLeadActivities: async (leadId, filters = {}) => {
     try {
-      const response = await api.get('/activities', { 
+      const response = await api.get('/api/activities', { 
         params: { ...filters, lead_id: leadId } 
       });
       return response.data;
@@ -308,7 +292,7 @@ export const activityApi = {
   // Get activities for a specific customer (via lead relationship)
   getCustomerActivities: async (customerUid, filters = {}) => {
     try {
-      const response = await api.get('/activities', { 
+      const response = await api.get('/api/activities', { 
         params: { ...filters, customer_uid: customerUid } 
       });
       return response.data;
@@ -322,7 +306,7 @@ export const activityApi = {
   // Create a new task
   createTask: async (taskData) => {
     try {
-      const response = await api.post('/tasks', taskData);
+      const response = await api.post('/api/tasks', taskData);
       return response.data;
     } catch (error) {
       throw new Error('Failed to create task');
@@ -332,7 +316,7 @@ export const activityApi = {
   // Update a task
   updateTask: async (taskId, taskData) => {
     try {
-      const response = await api.put(`/tasks/${taskId}`, taskData);
+      const response = await api.put(`/api/tasks/${taskId}`, taskData);
       return response.data;
     } catch (error) {
       throw new Error('Failed to update task');
@@ -342,7 +326,7 @@ export const activityApi = {
   // Complete a task
   completeTask: async (taskId, completionNotes = null) => {
     try {
-      const response = await api.post(`/tasks/${taskId}/complete`, {
+      const response = await api.post(`/api/tasks/${taskId}/complete`, {
         completion_notes: completionNotes
       });
       return response.data;
@@ -354,7 +338,7 @@ export const activityApi = {
   // Cancel a task
   cancelTask: async (taskId, reason = null) => {
     try {
-      const response = await api.post(`/tasks/${taskId}/cancel`, {
+      const response = await api.post(`/api/tasks/${taskId}/cancel`, {
         reason: reason
       });
       return response.data;
@@ -366,7 +350,7 @@ export const activityApi = {
   // Get pending tasks
   getTasks: async (filters = {}) => {
     try {
-      const response = await api.get('/activities', { 
+      const response = await api.get('/api/activities', { 
         params: { ...filters, tasks_only: 'true' } 
       });
       return response.data;
@@ -378,7 +362,7 @@ export const activityApi = {
   // Get overdue tasks
   getOverdueTasks: async (filters = {}) => {
     try {
-      const response = await api.get('/activities', { 
+      const response = await api.get('/api/activities', { 
         params: { ...filters, overdue_only: 'true' } 
       });
       return response.data;
@@ -390,7 +374,7 @@ export const activityApi = {
   // Get tasks by status
   getTasksByStatus: async (status, filters = {}) => {
     try {
-      const response = await api.get('/activities', { 
+      const response = await api.get('/api/activities', { 
         params: { ...filters, status: status } 
       });
       return response.data;
@@ -402,7 +386,7 @@ export const activityApi = {
   // Get tasks assigned to specific person
   getAssignedTasks: async (assignedTo, filters = {}) => {
     try {
-      const response = await api.get('/activities', { 
+      const response = await api.get('/api/activities', { 
         params: { ...filters, assigned_to: assignedTo, tasks_only: 'true' } 
       });
       return response.data;
@@ -416,7 +400,7 @@ export const activityApi = {
 export const tradingApi = {
   getTradingVolume: async (filters = {}) => {
     try {
-      const response = await api.get('/trading-volume', { params: filters });
+      const response = await api.get('/api/trading-volume', { params: filters });
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch trading volume');
@@ -424,7 +408,7 @@ export const tradingApi = {
   },
   getTradingSummary: async (filters = {}) => {
     try {
-      const response = await api.get('/trading-summary', { params: filters });
+      const response = await api.get('/api/trading-summary', { params: filters });
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch trading summary');
@@ -432,7 +416,7 @@ export const tradingApi = {
   },
   getTradingVolumeTimeSeries: async (filters = {}) => {
     try {
-      const response = await api.get('/trading-volume-time-series', { params: filters });
+      const response = await api.get('/api/trading-volume-time-series', { params: filters });
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch trading volume time series');
@@ -440,7 +424,7 @@ export const tradingApi = {
   },
   getTopCustomers: async (filters = {}) => {
     try {
-      const response = await api.get('/analytics/trading-volume-top-customers', { params: filters });
+      const response = await api.get('/api/analytics/trading-volume-top-customers', { params: filters });
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch top customers');
@@ -451,7 +435,7 @@ export const tradingApi = {
 export const analyticsApi = {
   getLeadConversionRate: async (filters = {}) => {
     try {
-      const response = await api.get('/analytics/monthly-lead-conversion-rate', { params: filters });
+      const response = await api.get('/api/analytics/monthly-lead-conversion-rate', { params: filters });
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch lead conversion rate');
@@ -459,7 +443,7 @@ export const analyticsApi = {
   },
   getActivityAnalytics: async (filters = {}) => {
     try {
-      const response = await api.get('/analytics/activity-analytics', { params: filters });
+      const response = await api.get('/api/analytics/activity-analytics', { params: filters });
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch monthly activity analytics');
@@ -467,7 +451,7 @@ export const analyticsApi = {
   },
   getAvgDailyActivity: async (filters = {}) => {
     try {
-      const response = await api.get('/analytics/avg-daily-activity', { params: filters });
+      const response = await api.get('/api/analytics/avg-daily-activity', { params: filters });
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch average daily activity');
@@ -475,7 +459,7 @@ export const analyticsApi = {
   },
   getLeadFunnel: async (filters = {}) => {
     try {
-      const response = await api.get('/analytics/lead-funnel', { params: filters });
+      const response = await api.get('/api/analytics/lead-funnel', { params: filters });
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch lead funnel');

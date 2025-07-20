@@ -33,4 +33,9 @@ cmds = ["pip install -r requirements.txt"]
 startCommand = "gunicorn run:app --bind 0.0.0.0:$PORT"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 100
-restartPolicyType = "on_failure" 
+restartPolicyType = "on_failure"
+
+# Environment variables for production
+[variables]
+FLASK_ENV = "production"
+LOG_LEVEL = "WARNING" 

@@ -34,6 +34,7 @@ from api.models.activity import Activity
 from api.models.trading_volume import TradingVolume
 from api.resources.analytics import AvgDailyActivityResource, LeadConversionRateResource, ActivityAnalyticsResource, LeadFunnelResource
 from api.resources.database import DatabaseInitResource
+from api.resources.demo import DemoResource, DemoSessionResource
 
 # Initialize logging
 setup_logging(
@@ -522,6 +523,10 @@ def create_app():
     
     # Database management resources
     api.add_resource(DatabaseInitResource, '/api/init-db')
+    
+    # Demo resources
+    api.add_resource(DemoResource, '/api/demo')
+    api.add_resource(DemoSessionResource, '/api/demo/session')
     
     # Database status check endpoint
     @app.route('/api/db-status', methods=['GET'])

@@ -5,30 +5,44 @@ import Leads from './pages/Leads';
 import Customers from './pages/Customers';
 import Analytics from './pages/Analytics';
 import Activity from './pages/Activity';
+import Demo from './pages/Demo';
 import Sidebar from './components/layout/SideBar';
+import DemoBanner from './components/common/DemoBanner';
 import TradingVolume from './pages/TradingVolume';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import { DemoProvider } from './contexts/DemoContext';
 
 function App() {
   return (
     <ErrorBoundary>
-      <Router>
-        <div className="flex">
-          <Sidebar />
-          <main className="flex-1 pl-64">
-            <ErrorBoundary>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/leads" element={<Leads />} />
-                <Route path="/customers" element={<Customers />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="/activity" element={<Activity />} />
-                <Route path="/trading-volume" element={<TradingVolume />} />
-              </Routes>
-            </ErrorBoundary>
-          </main>
-        </div>
-      </Router>
+      <DemoProvider>
+        <Router>
+          <Routes>
+            {/* Demo route without sidebar */}
+            <Route path="/demo" element={<Demo />} />
+            
+            {/* Main app routes with sidebar */}
+            <Route path="/*" element={
+              <div className="flex">
+                <Sidebar />
+                <main className="flex-1 pl-64">
+                  <DemoBanner />
+                  <ErrorBoundary>
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/leads" element={<Leads />} />
+                      <Route path="/customers" element={<Customers />} />
+                      <Route path="/analytics" element={<Analytics />} />
+                      <Route path="/activity" element={<Activity />} />
+                      <Route path="/trading-volume" element={<TradingVolume />} />
+                    </Routes>
+                  </ErrorBoundary>
+                </main>
+              </div>
+            } />
+          </Routes>
+        </Router>
+      </DemoProvider>
     </ErrorBoundary>
   );
 }
