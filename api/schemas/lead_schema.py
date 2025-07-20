@@ -1,6 +1,7 @@
 from marshmallow import Schema, fields, validate, post_load
 from datetime import datetime
 import os
+from api.utils.demo_mode import is_demo_mode
 
 class LeadSchema(Schema):
     """Schema for Lead model with conditional date_created override."""
@@ -38,10 +39,10 @@ class LeadSchema(Schema):
     @post_load
     def handle_date_created(self, data, **kwargs):
         """Handle date_created override in demo mode."""
-        # Check if we're in demo mode and date_created was provided
-        is_demo_mode = os.getenv('DEMO_MODE', 'false').lower() == 'true'
+        # Check if we're in demo mode using centralized utility
+        demo_mode_active = is_demo_mode()
         
-        if is_demo_mode and '_demo_date_created' in data:
+        if demo_mode_active and '_demo_date_created' in data:
             # In demo mode, allow date_created override
             data['date_created'] = data.pop('_demo_date_created')
         else:
