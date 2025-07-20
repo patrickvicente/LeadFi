@@ -133,22 +133,38 @@ class DatabaseInitResource(Resource):
             with open(init_sql_path, 'r') as f:
                 sql_content = f.read()
             
+            logger.info(f"Read SQL file: {len(sql_content)} characters")
+            
             # Parse SQL statements properly (handle functions, comments, etc.)
             statements = self._parse_sql_statements(sql_content)
+            logger.info(f"Parsed {len(statements)} SQL statements")
+            
+            if len(statements) == 0:
+                return {
+                    'status': 'error',
+                    'message': 'No SQL statements found in init.sql',
+                    'sql_file_size': len(sql_content)
+                }
             successful = 0
             errors = 0
             
             with db.engine.connect() as conn:
-                for statement in statements:
+                for i, statement in enumerate(statements):
                     if statement and not statement.upper().startswith('--'):
                         try:
+                            logger.info(f"Executing statement {i+1}/{len(statements)}")
                             conn.execute(text(statement))
                             conn.commit()
                             successful += 1
+                            logger.info(f"Statement {i+1} executed successfully")
                         except Exception as e:
                             errors += 1
-                            if errors <= 3:
-                                logger.warning(f"SQL execution warning: {str(e)[:100]}")
+                            logger.error(f"SQL execution error in statement {i+1}: {str(e)}")
+                            # Log the first few lines of the failing statement
+                            statement_lines = statement.split('\n')[:3]
+                            logger.error(f"Failing statement preview: {' '.join(statement_lines)}")
+                            if errors >= 5:  # Stop after 5 errors to avoid spam
+                                break
             
             # Verify tables were created
             inspector = inspect(db.engine)
@@ -156,11 +172,32 @@ class DatabaseInitResource(Resource):
             
             logger.info(f"Database schema initialized: {successful} statements executed, {len(final_tables)} tables created")
             
+            # Only return success if we actually executed statements and created tables
+            if successful == 0:
+                return {
+                    'status': 'error',
+                    'message': 'No SQL statements were executed successfully',
+                    'statements_executed': successful,
+                    'errors': errors,
+                    'tables_created': len(final_tables),
+                    'table_names': final_tables
+                }
+            
+            if len(final_tables) == 0:
+                return {
+                    'status': 'error',
+                    'message': 'SQL statements executed but no tables were created',
+                    'statements_executed': successful,
+                    'errors': errors,
+                    'tables_created': len(final_tables),
+                    'table_names': final_tables
+                }
+            
             return {
                 'status': 'success',
                 'message': 'Schema initialized successfully',
                 'statements_executed': successful,
-                'warnings': errors,
+                'errors': errors,
                 'tables_created': len(final_tables),
                 'table_names': final_tables
             }
