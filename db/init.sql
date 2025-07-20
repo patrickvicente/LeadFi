@@ -179,6 +179,12 @@ ON activity
 FOR EACH ROW
 EXECUTE PROCEDURE trigger_set_timestamp();
 
+CREATE TRIGGER set_timestamp
+BEFORE INSERT
+ON customer
+FOR EACH ROW
+EXECUTE PROCEDURE trigger_set_timestamp();
+
 CREATE TRIGGER set_activity_completion
 BEFORE INSERT OR UPDATE
 ON activity
