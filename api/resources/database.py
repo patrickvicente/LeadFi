@@ -148,44 +148,26 @@ class DatabaseInitResource(Resource):
             successful = 0
             errors = 0
             
-            # Use psql to execute the SQL file properly
-            import subprocess
-            import tempfile
-            
-            # Create a temporary file with the SQL content
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.sql', delete=False) as temp_file:
-                temp_file.write(sql_content)
-                temp_file_path = temp_file.name
-            
-            try:
-                # Get database connection info
-                db_url = os.environ.get('DATABASE_URL')
-                if not db_url:
-                    return {
-                        'status': 'error',
-                        'message': 'DATABASE_URL not found in environment'
-                    }
-                
-                # Execute using psql
-                result = subprocess.run([
-                    'psql', db_url, '-f', temp_file_path, '-v', 'ON_ERROR_STOP=1'
-                ], capture_output=True, text=True, timeout=60)
-                
-                if result.returncode == 0:
-                    successful = 1  # Count as one successful execution
-                    logger.info("SQL file executed successfully using psql")
-                else:
+            # Execute SQL statements in order using SQLAlchemy
+            with db.engine.connect() as conn:
+                # Start a transaction
+                trans = conn.begin()
+                try:
+                    # Execute the entire SQL content as one statement
+                    # This ensures proper order and handles functions correctly
+                    conn.execute(text(sql_content))
+                    trans.commit()
+                    successful = 1
+                    logger.info("SQL file executed successfully as one transaction")
+                except Exception as e:
+                    trans.rollback()
                     errors = 1
-                    logger.error(f"psql execution failed: {result.stderr}")
+                    logger.error(f"SQL execution failed: {str(e)}")
                     return {
                         'status': 'error',
                         'message': 'SQL execution failed',
-                        'error': result.stderr
+                        'error': str(e)
                     }
-                    
-            finally:
-                # Clean up temporary file
-                os.unlink(temp_file_path)
             
             # Verify tables were created
             inspector = inspect(db.engine)
