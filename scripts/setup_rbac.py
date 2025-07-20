@@ -326,8 +326,18 @@ class RBACSetup:
                 
             except Exception as e:
                 print(f"   Warning: Could not create user {user_config['name']}: {e}")
+                # Rollback and retry the connection to avoid transaction abortion
+                try:
+                    self.conn.rollback()
+                except:
+                    pass
                 
-        self.conn.commit()
+        # Commit successful user creations
+        try:
+            self.conn.commit()
+        except Exception as e:
+            print(f"   Warning: Could not commit user creations: {e}")
+            
         return user_ids
         
     def assign_leads_to_bd_users(self, user_ids: Dict):
@@ -458,39 +468,58 @@ class RBACSetup:
         print("\n🔐 RBAC SETUP SUMMARY")
         print("=" * 50)
         
-        # User summary
-        self.cursor.execute("SELECT role, COUNT(*) as count FROM users GROUP BY role")
-        role_counts = self.cursor.fetchall()
-        
-        print("👥 Users Created:")
-        for role in role_counts:
-            print(f"   {role['role']}: {role['count']}")
+        try:
+            # Check if users table exists and has data
+            self.cursor.execute("SELECT COUNT(*) as count FROM users")
+            user_count = self.cursor.fetchone()['count']
             
-        # Assignment summary
-        self.cursor.execute("""
-            SELECT assignment_type, COUNT(*) as count 
-            FROM user_assignments 
-            GROUP BY assignment_type
-        """)
-        assignment_counts = self.cursor.fetchall()
-        
-        print("\n📋 Assignments Created:")
-        for assignment in assignment_counts:
-            print(f"   {assignment['assignment_type']}: {assignment['count']}")
+            if user_count == 0:
+                print("⚠️  No users found in database")
+                return
+                
+            # User summary
+            self.cursor.execute("SELECT role, COUNT(*) as count FROM users GROUP BY role")
+            role_counts = self.cursor.fetchall()
             
-        # Demo users info
-        print("\n🎯 Demo Users:")
-        for role, config in self.demo_users.items():
-            user_id = user_ids.get(role)
-            print(f"   {config['name']} ({config['role']}): {config['email']}")
-            print(f"      Permissions: {', '.join(config['permissions'])}")
+            print("👥 Users Created:")
+            for role in role_counts:
+                print(f"   {role['role']}: {role['count']}")
+                
+            # Assignment summary
+            self.cursor.execute("""
+                SELECT assignment_type, COUNT(*) as count 
+                FROM user_assignments 
+                GROUP BY assignment_type
+            """)
+            assignment_counts = self.cursor.fetchall()
             
-        print("\n✅ RBAC setup completed successfully!")
+            print("\n📋 Assignments Created:")
+            for assignment in assignment_counts:
+                print(f"   {assignment['assignment_type']}: {assignment['count']}")
+                
+            # Demo users info
+            print("\n🎯 Demo Users:")
+            for role, config in self.demo_users.items():
+                user_id = user_ids.get(role)
+                if user_id:
+                    print(f"   {config['name']} ({config['role']}): {config['email']}")
+                    print(f"      Permissions: {', '.join(config['permissions'])}")
+                else:
+                    print(f"   {config['name']} ({config['role']}): {config['email']} - NOT CREATED")
+                    
+            print("\n✅ RBAC setup completed successfully!")
+            
+        except Exception as e:
+            print(f"⚠️  Could not generate summary: {e}")
+            print("   RBAC setup may have partially succeeded")
         
     def run(self):
         """Main execution method"""
         print("🔐 LeadFi RBAC Setup")
         print("=" * 40)
+        
+        user_ids = {}
+        success = True
         
         try:
             # Setup tables
@@ -512,16 +541,29 @@ class RBACSetup:
             # Create demo session
             self.create_demo_session(user_ids)
             
-            # Generate summary
-            self.generate_summary(user_ids)
-            
         except Exception as e:
             print(f"\n❌ Error during RBAC setup: {e}")
-            self.conn.rollback()
-            raise
-        finally:
+            success = False
+            try:
+                self.conn.rollback()
+            except:
+                pass  # Ignore rollback errors
+            
+        # Generate summary only if we have user_ids and no errors
+        if success and user_ids:
+            try:
+                self.generate_summary(user_ids)
+            except Exception as e:
+                print(f"⚠️  Warning: Could not generate summary: {e}")
+                # Don't fail the entire setup for summary errors
+        else:
+            print("\n⚠️  Skipping summary generation due to setup errors")
+            
+        try:
             self.cursor.close()
             self.conn.close()
+        except:
+            pass  # Ignore close errors
 
 if __name__ == "__main__":
     rbac_setup = RBACSetup()
