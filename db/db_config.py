@@ -14,27 +14,33 @@ load_dotenv()
 # Create SQLAlchemy instance
 db = SQLAlchemy()
 
-# Database configuration - uses Railway's PostgreSQL in production, SQLite in development
+# Database configuration - uses Railway's PostgreSQL in production, PostgreSQL/SQLite in development
 def get_db_url():
-    # Check if we're in production (Railway sets PGHOST and other production indicators)
-    # Also check if PostgreSQL is actually available locally
-    if (os.getenv("PGHOST") and os.getenv("PGHOST") != "localhost") or os.getenv("RAILWAY_ENVIRONMENT"):
-        # Production - use PostgreSQL (Railway or other production environment)
+    # Check if PostgreSQL environment variables are set
+    pghost = os.getenv("PGHOST")
+    pgport = os.getenv("PGPORT")
+    pgdatabase = os.getenv("PGDATABASE")
+    pguser = os.getenv("PGUSER")
+    pgpassword = os.getenv("POSTGRES_PASSWORD")
+    
+    # If we have PostgreSQL configuration, use it (including localhost)
+    if pghost and pgdatabase and pguser:
+        # Use PostgreSQL (Railway, localhost, or other environment)
         db_config = {
-            "host": os.getenv("PGHOST"),
-            "port": os.getenv("PGPORT", "5432"),
-            "database": os.getenv("PGDATABASE", "railway"),
-            "user": os.getenv("PGUSER", "postgres"),     
-            "password": os.getenv("POSTGRES_PASSWORD", "")  
+            "host": pghost,
+            "port": pgport or "5432",
+            "database": pgdatabase,
+            "user": pguser,     
+            "password": pgpassword or ""  
         }
         url = f"postgresql://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['database']}"
-        logger.info(f"Production Database URL: postgresql://{db_config['user']}:****@{db_config['host']}:{db_config['port']}/{db_config['database']}")
+        logger.info(f"PostgreSQL Database URL: postgresql://{db_config['user']}:****@{db_config['host']}:{db_config['port']}/{db_config['database']}")
         return url
     else:
-        # Development - use SQLite
+        # Fallback to SQLite if no PostgreSQL config
         db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'leadfi_local.db')
         url = f"sqlite:///{db_path}"
-        logger.info(f"Development Database URL: {url}")
+        logger.info(f"SQLite Database URL: {url}")
         return url
 
 # Create single engine instance

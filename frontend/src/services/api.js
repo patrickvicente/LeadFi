@@ -50,10 +50,31 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle demo mode errors
-    if (error.response?.status === 401 && localStorage.getItem('demoMode') === 'true') {
-      // In demo mode, redirect to demo page instead of login
-      window.location.href = '/demo';
+    // Handle authentication errors
+    if (error.response?.status === 401) {
+      // Clear any invalid session data
+      localStorage.removeItem('leadfi_demo_session');
+      localStorage.removeItem('demoMode');
+      localStorage.removeItem('demoUser');
+      
+      // Redirect to demo page
+      if (window.location.pathname !== '/demo') {
+        window.location.href = '/demo';
+      }
+      return Promise.reject(error);
+    }
+
+    // Handle session expired errors
+    if (error.response?.status === 403 && error.response?.data?.error === 'session_expired') {
+      // Clear session data
+      localStorage.removeItem('leadfi_demo_session');
+      localStorage.removeItem('demoMode');
+      localStorage.removeItem('demoUser');
+      
+      // Show session expired message and redirect
+      if (window.location.pathname !== '/demo') {
+        window.location.href = '/demo';
+      }
       return Promise.reject(error);
     }
     

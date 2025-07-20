@@ -25,9 +25,9 @@ const Demo = () => {
     
     if (result.success) {
       showToast(result.message, 'success');
-      // Redirect to dashboard after a short delay
+      // Redirect to user selection instead of dashboard
       setTimeout(() => {
-        window.location.href = '/';
+        window.location.href = '/demo-selection';
       }, 1500);
     } else {
       showToast(result.message, 'error');

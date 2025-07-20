@@ -1,7 +1,6 @@
 // src/components/layout/Sidebar.jsx
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useDemo } from '../../contexts/DemoContext';
 import {
   HomeIcon,
   UserGroupIcon,
@@ -9,13 +8,15 @@ import {
   ChartBarIcon,
   ClockIcon,
   PresentationChartLineIcon,
-  XMarkIcon,
   PlayIcon
 } from '@heroicons/react/24/outline';
+import UserSwitcher from '../auth/UserSwitcher';
 
 const Sidebar = () => {
   const location = useLocation();
-  const { isDemoMode, demoUser, stopDemo } = useDemo();
+  
+  // Check if demo mode is active
+  const isDemoMode = localStorage.getItem('demoMode') === 'true';
   
   const navigation = [
     { name: 'Dashboard', href: '/', icon: HomeIcon },
@@ -42,16 +43,6 @@ const Sidebar = () => {
         )}
       </div>
 
-      {/* Demo User Info */}
-      {isDemoMode && demoUser && (
-        <div className="px-4 py-3 border-b border-gray-800 bg-gray-800/30">
-          <div className="text-sm text-gray-300 mb-1">Demo User</div>
-          <div className="text-white font-medium text-sm">{demoUser.name}</div>
-          <div className="text-xs text-gray-400">{demoUser.email}</div>
-          <div className="text-xs text-highlight1 mt-1 capitalize">{demoUser.role}</div>
-        </div>
-      )}
-
       <nav className="flex-1 mt-5 flex flex-col gap-1 px-2">
         {navigation.map((item) => {
           const isActive = location.pathname === item.href;
@@ -71,23 +62,14 @@ const Sidebar = () => {
         })}
       </nav>
 
-      {/* Demo Controls */}
+      {/* User Switcher at bottom center */}
       {isDemoMode && (
-        <div className="p-4 border-t border-gray-800">
-          <button
-            onClick={stopDemo}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors text-sm"
-          >
-            <XMarkIcon className="h-4 w-4" />
-            Exit Demo
-          </button>
-          <div className="text-xs text-gray-500 text-center mt-2">
-            Demo data will be preserved
-          </div>
+        <div className="p-4 border-t border-gray-800 flex justify-center">
+          <UserSwitcher />
         </div>
       )}
 
-      <div className="h-8" /> {/* Spacer for bottom padding */}
+      <div className="h-4" /> {/* Spacer for bottom padding */}
     </aside>
   );
 };

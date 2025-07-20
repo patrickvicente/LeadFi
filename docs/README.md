@@ -12,6 +12,33 @@ LeadFi CRM is a comprehensive customer relationship management system designed f
 - **Customer Conversion**: Automatic lead-to-customer conversion at registration
 - **Performance Analysis**: VIP history and trading volume evaluation
 - **Account Management Handoff**: Streamlined client reallocation process
+- **Netflix-Style Demo System**: Interactive demo with role-based user selection and session management
+
+## 🎮 Demo System
+
+LeadFi CRM includes a comprehensive demo system that allows users to experience the full functionality with realistic data and role-based access control.
+
+### Demo Features
+- **Netflix-Style User Selection**: Beautiful card-based interface for demo user selection
+- **Role-Based Access Control**: Different permissions for Admin, Manager, Senior BD, and Demo User roles
+- **Session Persistence**: 24-hour demo sessions with automatic extension
+- **User Switching**: Seamless role switching during demo sessions
+- **Realistic Data**: Pre-populated with comprehensive demo data across all modules
+
+### Demo User Roles
+- **Admin User**: Full system access with user management capabilities
+- **Sarah Johnson (Manager)**: Team management with full access to all features
+- **Alex Chen (Senior BD)**: Lead and customer management with basic analytics
+- **Demo User**: Read-only access to all features for demonstration purposes
+
+### Getting Started with Demo
+1. Click "Start Demo" on the landing page
+2. Select your preferred demo user role
+3. Experience the full CRM functionality with realistic data
+4. Switch between users using the sidebar switcher
+5. Exit demo mode using the banner button
+
+For detailed demo documentation, see [Demo Guide](DEMO_GUIDE.md).
 
 ## 📊 Documentation Structure
 

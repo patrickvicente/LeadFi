@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 const DemoContext = createContext();
 
@@ -11,20 +11,7 @@ export const useDemo = () => {
 };
 
 export const DemoProvider = ({ children }) => {
-  const [isDemoMode, setIsDemoMode] = useState(false);
-  const [demoUser, setDemoUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Check if demo mode is active on mount
-  useEffect(() => {
-    const demoMode = localStorage.getItem('demoMode') === 'true';
-    const demoUserData = localStorage.getItem('demoUser');
-    
-    if (demoMode && demoUserData) {
-      setIsDemoMode(true);
-      setDemoUser(JSON.parse(demoUserData));
-    }
-  }, []);
 
   const startDemo = async () => {
     setIsLoading(true);
@@ -44,23 +31,14 @@ export const DemoProvider = ({ children }) => {
       const result = await response.json();
       
       if (result.status === 'success') {
-        // Set demo user (you can choose any from your RBAC setup)
-        const demoUserData = {
-          id: 1,
-          name: 'Demo User',
-          email: 'demo@leadfi.com',
-          role: 'demo',
-          permissions: ['read_only']
-        };
-
-        setIsDemoMode(true);
-        setDemoUser(demoUserData);
-        
-        // Store in localStorage
+        // Set demo mode but DON'T set user - let UserContext handle that
         localStorage.setItem('demoMode', 'true');
-        localStorage.setItem('demoUser', JSON.stringify(demoUserData));
         
-        return { success: true, message: 'Demo mode activated successfully!' };
+        return { 
+          success: true, 
+          message: 'Demo environment ready! Please select a user role.',
+          demoData: result.demo_setup || result
+        };
       } else {
         throw new Error(result.message || 'Demo initialization failed');
       }
@@ -73,17 +51,12 @@ export const DemoProvider = ({ children }) => {
   };
 
   const stopDemo = () => {
-    setIsDemoMode(false);
-    setDemoUser(null);
     localStorage.removeItem('demoMode');
-    localStorage.removeItem('demoUser');
     // Redirect to demo landing page
     window.location.href = '/demo';
   };
 
   const value = {
-    isDemoMode,
-    demoUser,
     isLoading,
     startDemo,
     stopDemo,
