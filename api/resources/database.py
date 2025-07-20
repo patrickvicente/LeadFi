@@ -6,6 +6,7 @@ from pathlib import Path
 from api.utils.logging_config import get_logger
 import subprocess
 import sys
+from sqlalchemy import inspect, text
 
 logger = get_logger('api.resources.database')
 
@@ -15,7 +16,6 @@ class DatabaseInitResource(Resource):
     def get(self):
         """Check database initialization status."""
         try:
-            from sqlalchemy import inspect
             inspector = inspect(db.engine)
             existing_tables = inspector.get_table_names()
             
@@ -55,7 +55,6 @@ class DatabaseInitResource(Resource):
             mode = request.args.get('mode', 'schema_only')  # schema_only, test_data, full_demo
             
             # Check if tables already exist
-            from sqlalchemy import inspect, text
             inspector = inspect(db.engine)
             existing_tables = inspector.get_table_names()
             
