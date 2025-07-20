@@ -305,27 +305,37 @@ class RBACSetup:
         
         for role, user_config in self.demo_users.items():
             try:
-                # Insert user
-                insert_query = """
-                INSERT INTO users (name, email, role, permissions, is_active)
-                VALUES (%(name)s, %(email)s, %(role)s, %(permissions)s, TRUE)
-                RETURNING user_id
-                """
+                # First check if user already exists
+                check_query = "SELECT user_id FROM users WHERE email = %s"
+                self.cursor.execute(check_query, (user_config['email'],))
+                existing_user = self.cursor.fetchone()
                 
-                self.cursor.execute(insert_query, {
-                    'name': user_config['name'],
-                    'email': user_config['email'],
-                    'role': user_config['role'],
-                    'permissions': json.dumps(user_config['permissions'])  # Convert list to JSON string for JSONB
-                })
-                
-                user_id = self.cursor.fetchone()['user_id']
-                user_ids[role] = user_id
-                
-                print(f"   Created {user_config['name']} ({user_config['role']})")
+                if existing_user:
+                    # User already exists, use existing user_id
+                    user_id = existing_user['user_id']
+                    user_ids[role] = user_id
+                    print(f"   Found existing user {user_config['name']} ({user_config['role']})")
+                else:
+                    # Insert new user
+                    insert_query = """
+                    INSERT INTO users (name, email, role, permissions, is_active)
+                    VALUES (%(name)s, %(email)s, %(role)s, %(permissions)s, TRUE)
+                    RETURNING user_id
+                    """
+                    
+                    self.cursor.execute(insert_query, {
+                        'name': user_config['name'],
+                        'email': user_config['email'],
+                        'role': user_config['role'],
+                        'permissions': json.dumps(user_config['permissions'])  # Convert list to JSON string for JSONB
+                    })
+                    
+                    user_id = self.cursor.fetchone()['user_id']
+                    user_ids[role] = user_id
+                    print(f"   Created {user_config['name']} ({user_config['role']})")
                 
             except Exception as e:
-                print(f"   Warning: Could not create user {user_config['name']}: {e}")
+                print(f"   Warning: Could not create/find user {user_config['name']}: {e}")
                 # Rollback and retry the connection to avoid transaction abortion
                 try:
                     self.conn.rollback()
