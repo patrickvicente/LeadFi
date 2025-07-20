@@ -28,20 +28,31 @@ from typing import List, Dict, Any, Optional
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from db.db_config import engine, DB_CONFIG
+from db.db_config import engine, get_db_url
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
 class TestDataGenerator:
     def __init__(self):
         # Create a direct psycopg2 connection for raw SQL operations
-        self.conn = psycopg2.connect(
-            host=DB_CONFIG['host'],
-            port=DB_CONFIG['port'],
-            database=DB_CONFIG['database'],
-            user=DB_CONFIG['user'],
-            password=DB_CONFIG['password']
-        )
+        # Parse the database URL to get connection parameters
+        db_url = get_db_url()
+        
+        if db_url.startswith('postgresql://'):
+            # Parse PostgreSQL URL
+            from urllib.parse import urlparse
+            parsed = urlparse(db_url)
+            
+            self.conn = psycopg2.connect(
+                host=parsed.hostname,
+                port=parsed.port or 5432,
+                database=parsed.path[1:],  # Remove leading slash
+                user=parsed.username,
+                password=parsed.password
+            )
+        else:
+            # SQLite - use the engine directly
+            raise ValueError("Test data generation requires PostgreSQL database")
         self.cursor = self.conn.cursor(cursor_factory=RealDictCursor)
         
         # Configuration
