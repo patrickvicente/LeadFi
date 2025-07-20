@@ -463,8 +463,8 @@ class RBACSetup:
                 
                 self.cursor.execute(session_query, (
                     demo_user_id,
-                    demo_data['pages_visited'],
-                    demo_data['actions_performed']
+                    json.dumps(demo_data['pages_visited']),  # Convert list to JSON string
+                    json.dumps(demo_data['actions_performed'])  # Convert list to JSON string
                 ))
                 
                 self.conn.commit()
