@@ -17,6 +17,7 @@ Roles:
 import os
 import sys
 import random
+import json
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 
@@ -315,7 +316,7 @@ class RBACSetup:
                     'name': user_config['name'],
                     'email': user_config['email'],
                     'role': user_config['role'],
-                    'permissions': user_config['permissions']
+                    'permissions': json.dumps(user_config['permissions'])  # Convert list to JSON string for JSONB
                 })
                 
                 user_id = self.cursor.fetchone()['user_id']
