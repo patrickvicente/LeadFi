@@ -137,10 +137,14 @@ CREATE INDEX IF NOT EXISTS idx_activity_priority ON activity(priority);
 -- Functions
 
 -- Returns the the timestamp and updates date_created
+-- Demo-aware version that respects existing date_created values
 CREATE OR REPLACE FUNCTION trigger_set_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.date_created = now();
+    -- Only set date_created if it's not already provided (demo mode override)
+    IF NEW.date_created IS NULL THEN
+        NEW.date_created = now();
+    END IF;
     
     RETURN NEW;
 END;

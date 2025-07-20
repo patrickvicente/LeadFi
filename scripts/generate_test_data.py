@@ -349,6 +349,15 @@ class TestDataGenerator:
         
         for lead in leads:
             try:
+                # Ensure date_created is explicitly set (not NULL) to prevent trigger override
+                if self.demo_mode and lead.get('date_created'):
+                    # In demo mode, use the historical date
+                    date_created = lead['date_created']
+                    print(f"   Using demo date: {date_created} for {lead['full_name']}")
+                else:
+                    # In production mode, let the trigger set current timestamp
+                    date_created = None
+                
                 insert_query = """
                 INSERT INTO lead (
                     full_name, title, email, telegram, phone_number, source, status,
@@ -362,7 +371,11 @@ class TestDataGenerator:
                 ) RETURNING lead_id
                 """
                 
-                self.cursor.execute(insert_query, lead)
+                # Update the lead dict with the correct date_created
+                lead_data = lead.copy()
+                lead_data['date_created'] = date_created
+                
+                self.cursor.execute(insert_query, lead_data)
                 lead_id = self.cursor.fetchone()['lead_id']
                 lead_ids.append(lead_id)
                 
@@ -413,6 +426,15 @@ class TestDataGenerator:
         # Insert customers
         for customer in customers:
             try:
+                # Ensure date_created is explicitly set (not NULL) to prevent trigger override
+                if self.demo_mode and customer.get('date_created'):
+                    # In demo mode, use the historical date
+                    date_created = customer['date_created']
+                    print(f"   Using demo date: {date_created} for customer {customer['name']}")
+                else:
+                    # In production mode, let the trigger set current timestamp
+                    date_created = None
+                
                 insert_query = """
                 INSERT INTO customer (
                     customer_uid, registered_email, type, name, is_closed, date_closed,
@@ -423,7 +445,11 @@ class TestDataGenerator:
                 )
                 """
                 
-                self.cursor.execute(insert_query, customer)
+                # Update the customer dict with the correct date_created
+                customer_data = customer.copy()
+                customer_data['date_created'] = date_created
+                
+                self.cursor.execute(insert_query, customer_data)
                 customer_uids.append(customer['customer_uid'])
                 
             except Exception as e:
