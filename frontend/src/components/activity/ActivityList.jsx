@@ -6,6 +6,7 @@ import { activityOptions } from '../../config/options';
 import { formatDate } from '../../utils/dateFormat';
 import ActivityDetailsModal from './ActivityDetailsModal';
 
+
 const ActivityList = ({ 
   // Data props (passed from parent)
   activities = [],
@@ -64,6 +65,8 @@ const ActivityList = ({
   const displayActivities = isEmbedded ? localActivities : activities;
   const displayLoading = isEmbedded ? localLoading : loading;
   const displayPagination = isEmbedded ? localPagination : pagination;
+
+
 
   // Load activities for embedded usage only
   const loadActivities = async (page = 1) => {

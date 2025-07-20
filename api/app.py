@@ -450,9 +450,9 @@ def create_app():
     def test_css():
         """Test serving the specific CSS file that's failing."""
         try:
-            css_file = '/app/frontend/build/static/css/main.35f551c3.css'
+            css_file = '/app/frontend/build/static/css/main.73e77aa0.css'
             if os.path.exists(css_file):
-                return send_from_directory('/app/frontend/build/static/css', 'main.35f551c3.css')
+                return send_from_directory('/app/frontend/build/static/css', 'main.73e77aa0.css')
             else:
                 return {'error': f'CSS file not found at {css_file}'}, 404
         except Exception as e:
@@ -463,9 +463,9 @@ def create_app():
     def test_js():
         """Test serving the specific JS file that's failing."""
         try:
-            js_file = '/app/frontend/build/static/js/main.397e99f4.js'
+            js_file = '/app/frontend/build/static/js/main.833fd8cd.js'
             if os.path.exists(js_file):
-                return send_from_directory('/app/frontend/build/static/js', 'main.397e99f4.js')
+                return send_from_directory('/app/frontend/build/static/js', 'main.833fd8cd.js')
             else:
                 return {'error': f'JS file not found at {js_file}'}, 404
         except Exception as e:
@@ -475,7 +475,7 @@ def create_app():
     @app.route('/api/debug/test-static-simple')
     def test_static_simple():
         """Simple test to check if we can read the JS file directly."""
-        filename = 'js/main.397e99f4.js'
+        filename = 'js/main.833fd8cd.js'
         possible_dirs = [
             '/app/frontend/build/static',
             os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend', 'build', 'static'),
@@ -595,6 +595,16 @@ def create_app():
         
         css_dir = os.path.join(os.getcwd(), 'frontend', 'build', 'static', 'css')
         return send_from_directory(css_dir, filename)
+    
+    @app.route('/static/media/<filename>')
+    def serve_media_files(filename):
+        """Serve media files (fonts, images, etc.) specifically."""
+        logger.info(f"=== MEDIA ROUTE HIT with {filename} ===")
+        from flask import send_from_directory
+        import os
+        
+        media_dir = os.path.join(os.getcwd(), 'frontend', 'build', 'static', 'media')
+        return send_from_directory(media_dir, filename)
     
     # Original static function (renamed to avoid conflict)
     def original_serve_static_files(filename):

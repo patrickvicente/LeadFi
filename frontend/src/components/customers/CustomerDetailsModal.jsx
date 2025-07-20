@@ -9,12 +9,15 @@ import FormSelect from '../common/FormSelect';
 import ActivityTaskModal from '../activity/ActivityTaskModal';
 import ActivitySummary from '../activity/ActivitySummary';
 
+
 const CustomerDetailsModal = ({ customer, loading = false, onClose, onEdit, onDelete, onSubmit, onViewLead }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [activityModalMode, setActivityModalMode] = useState('activity');
+
+
 
   const validationRules = {
     required: ['name', 'customer_uid', 'type'],

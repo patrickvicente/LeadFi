@@ -10,10 +10,13 @@ import { getDateRange } from '../utils/dateRangeHelper';
 import Filter from '../components/common/Filter';
 import { customerApi } from '../services/api';
 
+
 const Analytics = () => {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  
+
   
   // Filter state management
   const [filters, setFilters] = useState({
