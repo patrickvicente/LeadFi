@@ -54,6 +54,11 @@ class DatabaseInitResource(Resource):
             # Get initialization mode from query parameters
             mode = request.args.get('mode', 'schema_only')  # schema_only, test_data, full_demo
             
+            # Set DEMO_MODE environment variable if in full_demo mode
+            if mode == 'full_demo':
+                os.environ['DEMO_MODE'] = 'true'
+                logger.info("DEMO_MODE set to true for full_demo initialization")
+            
             # Check if tables already exist
             inspector = inspect(db.engine)
             existing_tables = inspector.get_table_names()

@@ -79,18 +79,53 @@ class RBACSetup:
                 'email': 'sarah.johnson@leadfi.com',
                 'role': 'manager',
                 'permissions': ['all', 'team_management'],
-                'bd_team': ['Alex Chen', 'Michael Rodriguez', 'Emma Thompson', 'David Kim']
+                'bd_team': ['Alex Chen', 'Michael Rodriguez', 'Emma Thompson', 'David Kim', 'Lisa Wang', 'James Miller', 'Anna Petrov']
             },
-            'bd_senior': {
+            'bd_senior_1': {
                 'name': 'Alex Chen', 
                 'email': 'alex.chen@leadfi.com',
                 'role': 'bd_senior',
                 'permissions': ['leads', 'customers', 'activities', 'limited_analytics'],
                 'assigned_leads': ['liquidity provider', 'institution', 'api', 'vip', 'broker', 'asset manager']
             },
-            'bd_junior': {
+            'bd_senior_2': {
+                'name': 'Michael Rodriguez',
+                'email': 'michael.rodriguez@leadfi.com',
+                'role': 'bd_senior',
+                'permissions': ['leads', 'customers', 'activities', 'limited_analytics'],
+                'assigned_leads': ['liquidity provider', 'institution', 'api', 'vip', 'broker', 'asset manager']
+            },
+            'bd_junior_1': {
                 'name': 'Emma Thompson',
                 'email': 'emma.thompson@leadfi.com', 
+                'role': 'bd_junior',
+                'permissions': ['leads', 'customers', 'activities', 'limited_analytics'],
+                'assigned_leads': ['liquidity provider', 'institution', 'api', 'vip', 'broker', 'asset manager']
+            },
+            'bd_junior_2': {
+                'name': 'David Kim',
+                'email': 'david.kim@leadfi.com',
+                'role': 'bd_junior',
+                'permissions': ['leads', 'customers', 'activities', 'limited_analytics'],
+                'assigned_leads': ['liquidity provider', 'institution', 'api', 'vip', 'broker', 'asset manager']
+            },
+            'bd_junior_3': {
+                'name': 'Lisa Wang',
+                'email': 'lisa.wang@leadfi.com',
+                'role': 'bd_junior',
+                'permissions': ['leads', 'customers', 'activities', 'limited_analytics'],
+                'assigned_leads': ['liquidity provider', 'institution', 'api', 'vip', 'broker', 'asset manager']
+            },
+            'bd_junior_4': {
+                'name': 'James Miller',
+                'email': 'james.miller@leadfi.com',
+                'role': 'bd_junior',
+                'permissions': ['leads', 'customers', 'activities', 'limited_analytics'],
+                'assigned_leads': ['liquidity provider', 'institution', 'api', 'vip', 'broker', 'asset manager']
+            },
+            'bd_junior_5': {
+                'name': 'Anna Petrov',
+                'email': 'anna.petrov@leadfi.com',
                 'role': 'bd_junior',
                 'permissions': ['leads', 'customers', 'activities', 'limited_analytics'],
                 'assigned_leads': ['liquidity provider', 'institution', 'api', 'vip', 'broker', 'asset manager']
@@ -302,15 +337,20 @@ class RBACSetup:
         self.cursor.execute("""
             SELECT lead_id, type, bd_in_charge, full_name, company_name
             FROM lead
-            WHERE bd_in_charge IN ('Alex Chen', 'Emma Thompson', 'Michael Rodriguez', 'David Kim')
+            WHERE bd_in_charge IN ('Alex Chen', 'Emma Thompson', 'Michael Rodriguez', 'David Kim', 'Lisa Wang', 'James Miller', 'Anna Petrov')
         """)
         
         leads = self.cursor.fetchall()
         
         # Create assignment mapping
         bd_assignments = {
-            'Alex Chen': user_ids.get('bd_senior'),
-            'Emma Thompson': user_ids.get('bd_junior')
+            'Alex Chen': user_ids.get('bd_senior_1'),
+            'Emma Thompson': user_ids.get('bd_junior_1'),
+            'Michael Rodriguez': user_ids.get('bd_senior_2'),
+            'David Kim': user_ids.get('bd_junior_2'),
+            'Lisa Wang': user_ids.get('bd_junior_3'),
+            'James Miller': user_ids.get('bd_junior_4'),
+            'Anna Petrov': user_ids.get('bd_junior_5')
         }
         
         assignments_created = 0
@@ -344,14 +384,19 @@ class RBACSetup:
         self.cursor.execute("""
             SELECT customer_uid, bd_in_charge, name
             FROM customer
-            WHERE bd_in_charge IN ('Alex Chen', 'Emma Thompson')
+            WHERE bd_in_charge IN ('Alex Chen', 'Emma Thompson', 'Michael Rodriguez', 'David Kim', 'Lisa Wang', 'James Miller', 'Anna Petrov')
         """)
         
         customers = self.cursor.fetchall()
         
         bd_assignments = {
-            'Alex Chen': user_ids.get('bd_senior'),
-            'Emma Thompson': user_ids.get('bd_junior')
+            'Alex Chen': user_ids.get('bd_senior_1'),
+            'Emma Thompson': user_ids.get('bd_junior_1'),
+            'Michael Rodriguez': user_ids.get('bd_senior_2'),
+            'David Kim': user_ids.get('bd_junior_2'),
+            'Lisa Wang': user_ids.get('bd_junior_3'),
+            'James Miller': user_ids.get('bd_junior_4'),
+            'Anna Petrov': user_ids.get('bd_junior_5')
         }
         
         assignments_created = 0
