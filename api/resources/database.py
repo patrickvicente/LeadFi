@@ -71,6 +71,18 @@ class DatabaseInitResource(Resource):
             if schema_result.get('status') != 'success':
                 return schema_result
             
+            # Verify tables were actually created
+            inspector = inspect(db.engine)
+            final_tables = inspector.get_table_names()
+            logger.info(f"Tables after schema initialization: {final_tables}")
+            
+            if len(final_tables) == 0:
+                return {
+                    'status': 'error',
+                    'message': 'Schema initialization completed but no tables were created',
+                    'schema_result': schema_result
+                }
+            
             # Handle different modes
             if mode == 'test_data':
                 test_data_result = self._generate_test_data()
@@ -211,6 +223,18 @@ class DatabaseInitResource(Resource):
     def _setup_demo_environment(self):
         """Setup full demo environment with RBAC and extended test data."""
         try:
+            # Verify tables exist before proceeding
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            logger.info(f"Tables before demo setup: {tables}")
+            
+            if 'lead' not in tables:
+                return {
+                    'status': 'error',
+                    'message': 'Lead table not found. Schema may not be properly initialized.',
+                    'available_tables': tables
+                }
+            
             # Generate extended test data (6 months)
             env = os.environ.copy()
             env['DATA_VOLUME'] = 'large'
