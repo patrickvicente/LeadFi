@@ -1,6 +1,6 @@
 from db.db_config import db
 from datetime import datetime
-from sqlalchemy.dialects.postgresql import JSONB
+import json
 
 class Activity(db.Model):
     __tablename__ = 'activity'
@@ -10,7 +10,7 @@ class Activity(db.Model):
     activity_type = db.Column(db.String(50), nullable=False)
     activity_category = db.Column(db.String(20), nullable=False, default='manual')
     description = db.Column(db.Text)
-    activity_metadata = db.Column(JSONB)  # JSON field for additional structured data
+    activity_metadata = db.Column(db.Text)  # JSON field for additional structured data (stored as text)
     date_created = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     created_by = db.Column(db.String(50))
     is_visible_to_bd = db.Column(db.Boolean, default=True)
